@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../domain/models/stock_models.dart';
 
 /// Branches available for inter-branch transfers (Screen 32).
@@ -31,10 +32,67 @@ class StockState {
 }
 
 class StockController extends StateNotifier<StockState> {
-  StockController() : super(_seed());
+  StockController() : super(_seed()) {
+    _load();
+  }
 
+  final _db = DbService.instance;
   static const _uuid = Uuid();
   static const _actor = 'Admin';
+
+  static String _fmt(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)} '
+        '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
+  }
+
+  StockItem _fromRow(Map<String, String?> r) {
+    final exp = r['expiry'];
+    return StockItem(
+      id: r['id'] ?? '',
+      name: r['name'] ?? '',
+      sku: r['sku'] ?? '',
+      category: StockCategory.values.firstWhere((c) => c.name == r['category'],
+          orElse: () => StockCategory.dryGoods),
+      quantity: double.tryParse(r['quantity'] ?? '') ?? 0,
+      unit: r['unit'] ?? '',
+      unitCost: double.tryParse(r['unit_cost'] ?? '') ?? 0,
+      lowThreshold: double.tryParse(r['low_threshold'] ?? '') ?? 0,
+      parLevel: double.tryParse(r['par_level'] ?? '') ?? 0,
+      expiry: (exp == null || exp.isEmpty) ? null : DateTime.tryParse(exp),
+    );
+  }
+
+  Future<void> _load() async {
+    if (!_db.isConnected) return; // keep in-memory seed
+    final rows = await _db.rows('SELECT * FROM stock_items ORDER BY id');
+    if (rows.isEmpty) {
+      for (final i in state.items) {
+        await _persistItem(i);
+      }
+    } else {
+      state = state.copyWith(items: rows.map(_fromRow).toList());
+    }
+  }
+
+  Future<void> _persistItem(StockItem i) => _db.exec(
+        'INSERT INTO stock_items (id,name,sku,category,quantity,unit,unit_cost,low_threshold,par_level,expiry) '
+        'VALUES (:id,:name,:sku,:cat,:qty,:unit,:cost,:low,:par,:exp) '
+        'ON DUPLICATE KEY UPDATE name=:name, sku=:sku, category=:cat, quantity=:qty, '
+        'unit=:unit, unit_cost=:cost, low_threshold=:low, par_level=:par, expiry=:exp',
+        {
+          'id': i.id,
+          'name': i.name,
+          'sku': i.sku,
+          'cat': i.category.name,
+          'qty': i.quantity,
+          'unit': i.unit,
+          'cost': i.unitCost,
+          'low': i.lowThreshold,
+          'par': i.parLevel,
+          'exp': i.expiry == null ? null : _fmt(i.expiry!),
+        },
+      );
 
   static StockState _seed() {
     final now = DateTime.now();
@@ -161,6 +219,8 @@ class StockController extends StateNotifier<StockState> {
       ],
       movements: [movement, ...state.movements],
     );
+    final u = byId(itemId);
+    if (u != null) _persistItem(u);
   }
 
   /// Adds received stock (Screen 29).
@@ -258,6 +318,8 @@ class StockController extends StateNotifier<StockState> {
         ...state.movements,
       ],
     );
+    final u = byId(itemId);
+    if (u != null) _persistItem(u);
   }
 
   /// Used by Goods Receiving to push received quantities into stock.

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Lifecycle of a customer reservation.
@@ -53,7 +54,63 @@ class Reservation {
 }
 
 class ReservationsNotifier extends StateNotifier<List<Reservation>> {
-  ReservationsNotifier() : super(_seed());
+  ReservationsNotifier() : super(const []) {
+    _load();
+  }
+
+  final _db = DbService.instance;
+
+  static String _fmt(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)} '
+        '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
+  }
+
+  Reservation _fromRow(Map<String, String?> r) => Reservation(
+        id: r['id'] ?? '',
+        guestName: r['guest_name'] ?? '',
+        phone: r['phone'] ?? '',
+        partySize: int.tryParse(r['party_size'] ?? '') ?? 1,
+        time: DateTime.tryParse(r['reserved_time'] ?? '') ?? DateTime.now(),
+        tableName: (r['table_name'] ?? '').isEmpty ? null : r['table_name'],
+        status: ReservationStatus.values.firstWhere(
+            (s) => s.name == r['status'],
+            orElse: () => ReservationStatus.pending),
+        note: (r['note'] ?? '').isEmpty ? null : r['note'],
+      );
+
+  Future<void> _load() async {
+    if (!_db.isConnected) {
+      state = _seed();
+      return;
+    }
+    final rows = await _db.rows('SELECT * FROM reservations ORDER BY reserved_time');
+    if (rows.isEmpty) {
+      for (final r in _seed()) {
+        await _upsert(r);
+      }
+      state = _seed();
+    } else {
+      state = rows.map(_fromRow).toList();
+    }
+  }
+
+  Future<void> _upsert(Reservation r) => _db.exec(
+        'INSERT INTO reservations (id,guest_name,phone,party_size,reserved_time,table_name,status,note) '
+        'VALUES (:id,:guest,:phone,:party,:time,:table,:status,:note) '
+        'ON DUPLICATE KEY UPDATE guest_name=:guest, phone=:phone, party_size=:party, '
+        'reserved_time=:time, table_name=:table, status=:status, note=:note',
+        {
+          'id': r.id,
+          'guest': r.guestName,
+          'phone': r.phone,
+          'party': r.partySize,
+          'time': _fmt(r.time),
+          'table': r.tableName,
+          'status': r.status.name,
+          'note': r.note,
+        },
+      );
 
   static List<Reservation> _seed() {
     final now = DateTime.now();
@@ -115,17 +172,22 @@ class ReservationsNotifier extends StateNotifier<List<Reservation>> {
     );
     state = [...state, reservation]
       ..sort((a, b) => a.time.compareTo(b.time));
+    _upsert(reservation);
   }
 
   void setStatus(String id, ReservationStatus status) {
+    Reservation? changed;
     state = [
       for (final r in state)
-        if (r.id == id) r.copyWith(status: status) else r,
+        if (r.id == id) (changed = r.copyWith(status: status)) else r,
     ];
+    if (changed != null) _upsert(changed);
   }
 
-  void remove(String id) =>
-      state = state.where((r) => r.id != id).toList();
+  void remove(String id) {
+    state = state.where((r) => r.id != id).toList();
+    _db.exec('DELETE FROM reservations WHERE id=:id', {'id': id});
+  }
 }
 
 final reservationsProvider =

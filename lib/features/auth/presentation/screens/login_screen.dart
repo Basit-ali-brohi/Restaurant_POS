@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tones.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/shell/app_shell.dart';
+import '../providers/session_provider.dart';
 import '../widgets/password_recovery_flow.dart';
 
 /// SCREEN 1/2 — Login. Split panel: branded kitchen visual (left) and an
@@ -23,6 +24,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscure = true;
   bool _remember = false;
   bool _loading = false;
+  StaffMember? _selectedRole;
+
+  /// Demo email for a quick-login staff member.
+  String _demoEmail(StaffMember m) =>
+      '${m.name.split(' ').first.toLowerCase()}@mainbranch.com';
+
+  /// Selecting a role auto-fills the form and sets the active user so the
+  /// shell's RBAC reflects that role immediately after login.
+  void _pickRole(StaffMember? m) {
+    if (m == null) return;
+    setState(() {
+      _selectedRole = m;
+      _email.text = _demoEmail(m);
+      _password.text = 'demo1234';
+    });
+    ref.read(activeUserProvider.notifier).state = m;
+  }
 
   static const _heroImage =
       'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=1200&q=80';
@@ -38,9 +56,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _loading = true);
     await Future.delayed(const Duration(milliseconds: 900));
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AppShell()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const AppShell()));
   }
 
   @override
@@ -49,34 +67,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final heading = t.isDark ? Colors.white : const Color(0xFF312E81);
 
     return Scaffold(
-      backgroundColor: t.isDark ? const Color(0xFF0B0B12) : const Color(0xFFEDEDF4),
+      backgroundColor: t.isDark
+          ? const Color(0xFF0B0B12)
+          : const Color(0xFFEDEDF4),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1180, maxHeight: 820),
-            child: LayoutBuilder(builder: (context, c) {
-              final showHero = c.maxWidth >= 820;
-              return Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  color: t.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
+            child: LayoutBuilder(
+              builder: (context, c) {
+                final showHero = c.maxWidth >= 820;
+                final panelHeight = c.maxHeight.isFinite ? c.maxHeight : 760.0;
+                return Container(
+                  height: panelHeight,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: BoxDecoration(
+                    color: t.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
                         color: Colors.black.withValues(alpha: 0.18),
                         blurRadius: 50,
-                        offset: const Offset(0, 24)),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    if (showHero) Expanded(child: _hero()),
-                    Expanded(child: _form(t, heading)),
-                  ],
-                ),
-              );
-            }),
+                        offset: const Offset(0, 24),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      if (showHero) Expanded(child: _hero()),
+                      Expanded(child: _form(t, heading)),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -88,8 +113,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.network(_heroImage, fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(color: const Color(0xFF1E1B33))),
+        Image.network(
+          _heroImage,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(color: const Color(0xFF1E1B33)),
+        ),
         // Indigo wash that deepens toward the bottom.
         DecoratedBox(
           decoration: BoxDecoration(
@@ -114,23 +142,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.restaurant, color: Color(0xFFE3B041), size: 28),
+                  const Icon(
+                    Icons.restaurant,
+                    color: Color(0xFFE3B041),
+                    size: 28,
+                  ),
                   const SizedBox(width: 10),
-                  Text('CloudPOS Pro',
-                      style: GoogleFonts.teko(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
-                          height: 1)),
+                  Text(
+                    'CloudPOS Pro',
+                    style: GoogleFonts.teko(
+                      color: Colors.white,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
               Text(
                 'Precision management for high-volume culinary environments. Secure, scalable, and built for speed.',
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 14,
-                    height: 1.5),
+                  color: Colors.white.withValues(alpha: 0.85),
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
             ],
           ),
@@ -141,142 +177,285 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   // --- Right: sign-in form ---------------------------------------------------
   Widget _form(AppTones t, Color heading) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 56, vertical: 48),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Welcome back',
-              style: GoogleFonts.teko(
-                  color: heading,
-                  fontSize: 52,
-                  fontWeight: FontWeight.w700,
-                  height: 1)),
-          const SizedBox(height: 6),
-          Text('Please enter your details to access your branch dashboard.',
-              style: TextStyle(color: t.textMuted, fontSize: 14)),
-          const SizedBox(height: 30),
-          _label(t, 'Email / Username'),
-          _field(t,
-              controller: _email,
-              hint: 'admin@mainbranch.com',
-              icon: Icons.person_outline),
-          const SizedBox(height: 18),
-          _label(t, 'Password'),
-          _field(t,
-              controller: _password,
-              hint: '••••••••',
-              icon: Icons.lock_outline,
-              obscure: _obscure,
-              submitOnEnter: true,
-              trailing: IconButton(
-                icon: Icon(
-                    _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    size: 20,
-                    color: t.textMuted),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              )),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: Checkbox(
-                  value: _remember,
-                  onChanged: (v) => setState(() => _remember = v ?? false),
-                  activeColor: AppColors.accent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5)),
+    return LayoutBuilder(
+      builder: (context, fc) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: fc.maxHeight.isFinite ? fc.maxHeight : 0,
+            ),
+            child: IntrinsicHeight(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 56,
+                  vertical: 40,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text('Remember me',
-                  style: TextStyle(color: t.textSecondary, fontSize: 13.5)),
-              const Spacer(),
-              GestureDetector(
-                onTap: () => PasswordRecoveryFlow.show(context),
-                child: const Text('Forgot password?',
-                    style: TextStyle(
-                        color: AppColors.accent,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome back',
+                      style: GoogleFonts.teko(
+                        color: heading,
+                        fontSize: 52,
                         fontWeight: FontWeight.w700,
-                        fontSize: 13.5)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Black primary action (per reference).
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: _loading ? null : _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: t.isDark ? const Color(0xFF15151E) : Colors.black,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: t.border,
-                elevation: 0,
-                side: t.isDark ? BorderSide(color: t.border) : BorderSide.none,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
-              child: _loading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                        height: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Please enter your details to access your branch dashboard.',
+                      style: TextStyle(color: t.textMuted, fontSize: 14),
+                    ),
+                    const SizedBox(height: 30),
+                    _label(t, 'Quick login as (Demo)'),
+                    _roleDropdown(t),
+                    const SizedBox(height: 18),
+                    _label(t, 'Email / Username'),
+                    _field(
+                      t,
+                      controller: _email,
+                      hint: 'admin@mainbranch.com',
+                      icon: Icons.person_outline,
+                    ),
+                    const SizedBox(height: 18),
+                    _label(t, 'Password'),
+                    _field(
+                      t,
+                      controller: _password,
+                      hint: '••••••••',
+                      icon: Icons.lock_outline,
+                      obscure: _obscure,
+                      submitOnEnter: true,
+                      trailing: IconButton(
+                        icon: Icon(
+                          _obscure
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                          size: 20,
+                          color: t.textMuted,
+                        ),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
                       children: [
-                        Text('LOGIN',
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: Checkbox(
+                            value: _remember,
+                            onChanged: (v) =>
+                                setState(() => _remember = v ?? false),
+                            activeColor: AppColors.accent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Remember me',
+                          style: TextStyle(
+                            color: t.textSecondary,
+                            fontSize: 13.5,
+                          ),
+                        ),
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () => PasswordRecoveryFlow.show(context),
+                          child: const Text(
+                            'Forgot password?',
                             style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                                letterSpacing: 1.0)),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, size: 18),
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+                    // Black primary action (per reference).
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: t.isDark
+                              ? const Color(0xFF15151E)
+                              : Colors.black,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: t.border,
+                          elevation: 0,
+                          side: t.isDark
+                              ? BorderSide(color: t.border)
+                              : BorderSide.none,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'LOGIN',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward, size: 18),
+                                ],
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: t.border)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'New staff member?',
+                            style: TextStyle(
+                              color: t.textMuted,
+                              fontSize: 12.5,
+                            ),
+                          ),
+                        ),
+                        Expanded(child: Divider(color: t.border)),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Center(
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Access request sent to your manager',
+                                ),
+                                duration: Duration(milliseconds: 1100),
+                              ),
+                            ),
+                        icon: Icon(
+                          Icons.badge_outlined,
+                          size: 17,
+                          color: t.textSecondary,
+                        ),
+                        label: Text(
+                          'Request access',
+                          style: TextStyle(
+                            color: t.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: t.border),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'v2.4.0',
+                        style: TextStyle(color: t.textMuted, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 28),
-          Row(children: [
-            Expanded(child: Divider(color: t.border)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Text('New staff member?',
-                  style: TextStyle(color: t.textMuted, fontSize: 12.5)),
-            ),
-            Expanded(child: Divider(color: t.border)),
-          ]),
-          const SizedBox(height: 18),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Access request sent to your manager'),
-                    duration: Duration(milliseconds: 1100)),
+        );
+      },
+    );
+  }
+
+  Widget _roleDropdown(AppTones t) {
+    return Container(
+      height: 54,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: t.isDark ? t.surfaceAlt : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: t.border),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.badge_outlined, size: 20, color: t.textMuted),
+          const SizedBox(width: 12),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<StaffMember>(
+                isExpanded: true,
+                value: _selectedRole,
+                dropdownColor: t.surface,
+                icon: Icon(Icons.expand_more, color: t.textMuted),
+                hint: Text(
+                  'Select a role to auto-fill',
+                  style: TextStyle(color: t.textMuted, fontSize: 14),
+                ),
+                style: TextStyle(color: t.textPrimary, fontSize: 14.5),
+                items: [
+                  for (final m in kStaffMembers)
+                    DropdownMenuItem<StaffMember>(
+                      value: m,
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 11,
+                            backgroundColor: AppColors.accent.withValues(
+                              alpha: 0.16,
+                            ),
+                            child: Text(
+                              m.initials,
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '${m.role}  ·  ${m.name}',
+                            style: TextStyle(
+                              color: t.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+                onChanged: _pickRole,
               ),
-              icon: Icon(Icons.badge_outlined, size: 17, color: t.textSecondary),
-              label: Text('Request access',
-                  style: TextStyle(
-                      color: t.textPrimary, fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: t.border),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-              ),
             ),
-          ),
-          const Spacer(),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('v2.4.0',
-                style: TextStyle(color: t.textMuted, fontSize: 11)),
           ),
         ],
       ),
@@ -284,26 +463,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _label(AppTones t, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text,
-            style: TextStyle(
-                color: t.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700)),
-      );
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        color: t.textPrimary,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
 
-  Widget _field(AppTones t,
-      {required TextEditingController controller,
-      required String hint,
-      required IconData icon,
-      bool obscure = false,
-      Widget? trailing,
-      bool submitOnEnter = false}) {
+  Widget _field(
+    AppTones t, {
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    Widget? trailing,
+    bool submitOnEnter = false,
+  }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      textInputAction:
-          submitOnEnter ? TextInputAction.done : TextInputAction.next,
+      textInputAction: submitOnEnter
+          ? TextInputAction.done
+          : TextInputAction.next,
       onSubmitted: submitOnEnter ? (_) => _login() : null,
       style: TextStyle(color: t.textPrimary, fontSize: 14.5),
       decoration: InputDecoration(
@@ -313,7 +498,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         hintStyle: TextStyle(color: t.textMuted, fontSize: 14),
         filled: true,
         fillColor: t.isDark ? t.surfaceAlt : Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 16,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: t.border),

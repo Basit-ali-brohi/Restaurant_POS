@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Live clock status of a staff member.
@@ -29,6 +32,10 @@ class Employee {
   final double basicSalary; // monthly
   final double allowances;
   final List<PayDeduction> deductions;
+  final String email;
+  final String phone;
+  final String cnic; // Pakistani CNIC number
+  final String joinDate;
 
   const Employee({
     required this.id,
@@ -39,6 +46,10 @@ class Employee {
     required this.basicSalary,
     required this.allowances,
     required this.deductions,
+    this.email = '',
+    this.phone = '',
+    this.cnic = '',
+    this.joinDate = '',
   });
 
   double get totalDeductions =>
@@ -54,6 +65,10 @@ class Employee {
     double? basicSalary,
     double? allowances,
     List<PayDeduction>? deductions,
+    String? email,
+    String? phone,
+    String? cnic,
+    String? joinDate,
   }) =>
       Employee(
         id: id,
@@ -64,11 +79,19 @@ class Employee {
         basicSalary: basicSalary ?? this.basicSalary,
         allowances: allowances ?? this.allowances,
         deductions: deductions ?? this.deductions,
+        email: email ?? this.email,
+        phone: phone ?? this.phone,
+        cnic: cnic ?? this.cnic,
+        joinDate: joinDate ?? this.joinDate,
       );
 }
 
 class PayrollNotifier extends StateNotifier<List<Employee>> {
-  PayrollNotifier() : super(_seed);
+  PayrollNotifier() : super(const []) {
+    _load();
+  }
+
+  final _db = DbService.instance;
 
   static const List<Employee> _seed = [
     Employee(
@@ -147,11 +170,85 @@ class PayrollNotifier extends StateNotifier<List<Employee>> {
     'Cleaner',
   ];
 
+  Employee _fromRow(Map<String, String?> r) {
+    final raw = r['deductions'];
+    final List deds = (raw == null || raw.isEmpty)
+        ? const []
+        : (jsonDecode(raw) as List);
+    return Employee(
+      id: r['id'] ?? '',
+      name: r['name'] ?? '',
+      role: r['role'] ?? '',
+      status: StaffStatus.values.firstWhere((s) => s.name == r['status'],
+          orElse: () => StaffStatus.offDuty),
+      weeklyHours: double.tryParse(r['weekly_hours'] ?? '') ?? 0,
+      basicSalary: double.tryParse(r['basic_salary'] ?? '') ?? 0,
+      allowances: double.tryParse(r['allowances'] ?? '') ?? 0,
+      email: r['email'] ?? '',
+      phone: r['phone'] ?? '',
+      cnic: r['cnic'] ?? '',
+      joinDate: r['join_date'] ?? '',
+      deductions: [
+        for (final d in deds)
+          PayDeduction(
+              d['label'] as String, (d['amount'] as num).toDouble()),
+      ],
+    );
+  }
+
+  Future<void> _load() async {
+    if (!_db.isConnected) {
+      state = _seed;
+      return;
+    }
+    final rows = await _db.rows('SELECT * FROM employees ORDER BY id');
+    if (rows.isEmpty) {
+      for (final e in _seed) {
+        await _upsert(e);
+      }
+      state = _seed;
+    } else {
+      state = rows.map(_fromRow).toList();
+      for (final e in state) {
+        final n = int.tryParse(e.id.replaceAll(RegExp(r'[^0-9]'), ''));
+        if (n != null && n > _seq) _seq = n;
+      }
+    }
+  }
+
+  Future<void> _upsert(Employee e) {
+    final deds = jsonEncode(
+        e.deductions.map((d) => {'label': d.label, 'amount': d.amount}).toList());
+    return _db.exec(
+      'INSERT INTO employees (id,name,role,status,weekly_hours,basic_salary,allowances,deductions,email,phone,cnic,join_date) '
+      'VALUES (:id,:name,:role,:status,:wh,:salary,:allow,:deds,:email,:phone,:cnic,:jd) '
+      'ON DUPLICATE KEY UPDATE name=:name, role=:role, status=:status, '
+      'weekly_hours=:wh, basic_salary=:salary, allowances=:allow, deductions=:deds, '
+      'email=:email, phone=:phone, cnic=:cnic, join_date=:jd',
+      {
+        'id': e.id,
+        'name': e.name,
+        'role': e.role,
+        'status': e.status.name,
+        'wh': e.weeklyHours,
+        'salary': e.basicSalary,
+        'allow': e.allowances,
+        'deds': deds,
+        'email': e.email,
+        'phone': e.phone,
+        'cnic': e.cnic,
+        'jd': e.joinDate,
+      },
+    );
+  }
+
   void setStatus(String id, StaffStatus status) {
+    Employee? changed;
     state = [
       for (final e in state)
-        if (e.id == id) e.copyWith(status: status) else e,
+        if (e.id == id) (changed = e.copyWith(status: status)) else e,
     ];
+    if (changed != null) _upsert(changed);
   }
 
   /// Hire a new employee. Income tax / provident fund deductions are auto-
@@ -161,6 +258,10 @@ class PayrollNotifier extends StateNotifier<List<Employee>> {
     required String role,
     required double basicSalary,
     double allowances = 0,
+    String email = '',
+    String phone = '',
+    String cnic = '',
+    String joinDate = '',
   }) {
     final e = Employee(
       id: 'EMP-${++_seq}',
@@ -170,25 +271,42 @@ class PayrollNotifier extends StateNotifier<List<Employee>> {
       weeklyHours: 0,
       basicSalary: basicSalary,
       allowances: allowances,
+      email: email.trim(),
+      phone: phone.trim(),
+      cnic: cnic.trim(),
+      joinDate: joinDate.trim(),
       deductions: [
         PayDeduction('Income Tax', (basicSalary * 0.10).roundToDouble()),
         PayDeduction('Provident Fund', (basicSalary * 0.05).roundToDouble()),
       ],
     );
     state = [...state, e];
+    _upsert(e);
     return e;
   }
 
   void update(String id,
-      {String? name, String? role, double? basicSalary, double? allowances}) {
+      {String? name,
+      String? role,
+      double? basicSalary,
+      double? allowances,
+      String? email,
+      String? phone,
+      String? cnic,
+      String? joinDate}) {
+    Employee? changed;
     state = [
       for (final e in state)
         if (e.id == id)
-          e.copyWith(
+          (changed = e.copyWith(
               name: name,
               role: role,
               basicSalary: basicSalary,
               allowances: allowances,
+              email: email,
+              phone: phone,
+              cnic: cnic,
+              joinDate: joinDate,
               deductions: basicSalary == null
                   ? null
                   : [
@@ -196,14 +314,17 @@ class PayrollNotifier extends StateNotifier<List<Employee>> {
                           'Income Tax', (basicSalary * 0.10).roundToDouble()),
                       PayDeduction('Provident Fund',
                           (basicSalary * 0.05).roundToDouble()),
-                    ])
+                    ]))
         else
           e,
     ];
+    if (changed != null) _upsert(changed);
   }
 
-  void remove(String id) =>
-      state = state.where((e) => e.id != id).toList();
+  void remove(String id) {
+    state = state.where((e) => e.id != id).toList();
+    _db.exec('DELETE FROM employees WHERE id=:id', {'id': id});
+  }
 }
 
 final payrollProvider =

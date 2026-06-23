@@ -109,7 +109,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
                       color: t.textPrimary,
                       fontSize: 19,
                       fontWeight: FontWeight.w800)),
-              Text('Total due  \$${total.toStringAsFixed(2)}',
+              Text('Total due  PKR ${total.toStringAsFixed(2)}',
                   style: TextStyle(color: t.textMuted, fontSize: 12.5)),
             ],
           ),
@@ -223,7 +223,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
               Text('Each person pays',
                   style: TextStyle(color: t.textSecondary, fontSize: 14)),
               const Spacer(),
-              Text('\$${per.toStringAsFixed(2)}',
+              Text('PKR ${per.toStringAsFixed(2)}',
                   style: const TextStyle(
                       color: AppColors.accent,
                       fontSize: 22,
@@ -245,7 +245,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: t.border),
                 ),
-                child: Text('P$i · \$${per.toStringAsFixed(2)}',
+                child: Text('P$i · PKR ${per.toStringAsFixed(2)}',
                     style: TextStyle(
                         color: t.textPrimary,
                         fontWeight: FontWeight.w600,
@@ -310,7 +310,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
                             fontWeight: FontWeight.w600,
                             fontSize: 13.5)),
                   ),
-                  Text('\$${c.total.toStringAsFixed(2)}',
+                  Text('PKR ${c.total.toStringAsFixed(2)}',
                       style: TextStyle(
                           color: t.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -391,7 +391,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    '\$${(total * ((double.tryParse(_pct[i].text) ?? 0) / 100)).toStringAsFixed(2)}',
+                    'PKR ${(total * ((double.tryParse(_pct[i].text) ?? 0) / 100)).toStringAsFixed(2)}',
                     textAlign: TextAlign.right,
                     style: TextStyle(
                         color: t.textPrimary,
@@ -465,7 +465,7 @@ class _SplitBillSheetState extends ConsumerState<SplitBillSheet> {
         children: [
           Text(label, style: TextStyle(color: t.textSecondary, fontSize: 14)),
           const Spacer(),
-          Text('\$${value.toStringAsFixed(2)}',
+          Text('PKR ${value.toStringAsFixed(2)}',
               style: TextStyle(
                   color: highlight ? AppColors.accent : t.textPrimary,
                   fontSize: 18,

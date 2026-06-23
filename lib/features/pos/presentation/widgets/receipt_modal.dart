@@ -37,7 +37,7 @@ class ReceiptModal extends StatelessWidget {
   static const Color _faint = Color(0xFF6B6B6B);
   static const Color _paper = Color(0xFFFBFBF8);
 
-  String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  String _money(double v) => 'PKR ${v.toStringAsFixed(2)}';
 
   String _timestamp(DateTime d) {
     String two(int n) => n.toString().padLeft(2, '0');

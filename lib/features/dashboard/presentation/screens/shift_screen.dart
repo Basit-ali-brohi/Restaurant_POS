@@ -268,7 +268,7 @@ class ShiftScreen extends ConsumerWidget {
                                   SizedBox(
                                     width: 120,
                                     child: Text(
-                                      "\$${e.amount.toStringAsFixed(2)}",
+                                      "PKR ${e.amount.toStringAsFixed(2)}",
                                       textAlign: TextAlign.right,
                                       style: TextStyle(
                                         color: isDarkMode ? Colors.white : Colors.black87,
@@ -307,7 +307,7 @@ class ShiftScreen extends ConsumerWidget {
           Text(label, style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54, fontSize: 12)),
           const SizedBox(height: 4),
           Text(
-            "\$${value.toStringAsFixed(2)}",
+            "PKR ${value.toStringAsFixed(2)}",
             style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ],
@@ -631,17 +631,17 @@ class ShiftScreen extends ConsumerWidget {
               pw.SizedBox(height: 10),
               pw.Divider(),
               pw.SizedBox(height: 8),
-              _pdfKV("Opening Cash", "\$${shift.openingCash.toStringAsFixed(2)}"),
-              _pdfKV("Cash In", "\$${cashIn.toStringAsFixed(2)}"),
-              _pdfKV("Cash Out", "\$${cashOut.toStringAsFixed(2)}"),
-              _pdfKV("Expected Cash", "\$${expectedCash.toStringAsFixed(2)}"),
-              _pdfKV("Closing Cash", "\$${shift.closingCash.toStringAsFixed(2)}"),
+              _pdfKV("Opening Cash", "PKR ${shift.openingCash.toStringAsFixed(2)}"),
+              _pdfKV("Cash In", "PKR ${cashIn.toStringAsFixed(2)}"),
+              _pdfKV("Cash Out", "PKR ${cashOut.toStringAsFixed(2)}"),
+              _pdfKV("Expected Cash", "PKR ${expectedCash.toStringAsFixed(2)}"),
+              _pdfKV("Closing Cash", "PKR ${shift.closingCash.toStringAsFixed(2)}"),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text("Variance", style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                    "\$${variance.toStringAsFixed(2)}",
+                    "PKR ${variance.toStringAsFixed(2)}",
                     style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: variance.abs() < 0.01 ? success : danger),
                   ),
                 ],
@@ -651,9 +651,9 @@ class ShiftScreen extends ConsumerWidget {
               pw.SizedBox(height: 8),
               pw.Text("Payment Breakdown", style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 6),
-              _pdfKV("Cash Sales", "\$${cashSales.toStringAsFixed(2)}"),
-              _pdfKV("Card Sales", "\$${cardSales.toStringAsFixed(2)}"),
-              _pdfKV("Other Sales", "\$${otherSales.toStringAsFixed(2)}"),
+              _pdfKV("Cash Sales", "PKR ${cashSales.toStringAsFixed(2)}"),
+              _pdfKV("Card Sales", "PKR ${cardSales.toStringAsFixed(2)}"),
+              _pdfKV("Other Sales", "PKR ${otherSales.toStringAsFixed(2)}"),
               pw.SizedBox(height: 10),
               pw.Divider(),
               pw.SizedBox(height: 8),
@@ -667,7 +667,7 @@ class ShiftScreen extends ConsumerWidget {
                       pw.SizedBox(width: 54, child: pw.Text("${e.time.hour.toString().padLeft(2, '0')}:${e.time.minute.toString().padLeft(2, '0')}", style: const pw.TextStyle(fontSize: 9))),
                       pw.SizedBox(width: 70, child: pw.Text(_pdfEventLabel(e.type), style: const pw.TextStyle(fontSize: 9))),
                       pw.Expanded(child: pw.Text(e.note.isEmpty ? "-" : e.note, style: const pw.TextStyle(fontSize: 9))),
-                      pw.SizedBox(width: 70, child: pw.Text("\$${e.amount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 9), textAlign: pw.TextAlign.right)),
+                      pw.SizedBox(width: 70, child: pw.Text("PKR ${e.amount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 9), textAlign: pw.TextAlign.right)),
                     ],
                   ),
                 );

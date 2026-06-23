@@ -78,7 +78,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                           children: [
                             SizedBox(
                               width: 260,
-                              child: _statCard("Total Revenue", "\$${totalRevenue.toStringAsFixed(2)}", Icons.trending_up, Colors.greenAccent, 0, true, isDarkMode),
+                              child: _statCard("Total Revenue", "PKR ${totalRevenue.toStringAsFixed(2)}", Icons.trending_up, Colors.greenAccent, 0, true, isDarkMode),
                             ),
                             const SizedBox(width: 16),
                             SizedBox(
@@ -142,7 +142,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         children: [
                           Expanded(child: _statCard(
                             "Total Revenue",
-                            "\$${totalRevenue.toStringAsFixed(2)}",
+                            "PKR ${totalRevenue.toStringAsFixed(2)}",
                             Icons.trending_up,
                             Colors.greenAccent,
                             0,
@@ -400,7 +400,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                           children: [
                             Text("100%", style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 18)),
                             const SizedBox(height: 2),
-                            Text("\$${total.toStringAsFixed(2)}", style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text("PKR ${total.toStringAsFixed(2)}", style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
                             const SizedBox(height: 2),
                             Text("Payments", style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 12)),
                           ],
@@ -651,7 +651,7 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         const SizedBox(width: 8),
         Text(label, style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
         const SizedBox(width: 8),
-        Text("\$${value.toStringAsFixed(2)}", style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
+        Text("PKR ${value.toStringAsFixed(2)}", style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),
       ],
     );
   }

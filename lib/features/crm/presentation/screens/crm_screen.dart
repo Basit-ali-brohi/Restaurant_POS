@@ -445,6 +445,9 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _phone;
   late final TextEditingController _email;
+  late final TextEditingController _address;
+  late final TextEditingController _city;
+  late final TextEditingController _dob;
   late CustomerSegment _segment;
   String? _error;
 
@@ -457,6 +460,9 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
     _name = TextEditingController(text: c?.name ?? '');
     _phone = TextEditingController(text: c?.phone ?? '');
     _email = TextEditingController(text: c?.email ?? '');
+    _address = TextEditingController(text: c?.address ?? '');
+    _city = TextEditingController(text: c?.city ?? '');
+    _dob = TextEditingController(text: c?.dob ?? '');
     _segment = c?.segment ?? CustomerSegment.newcomer;
   }
 
@@ -465,6 +471,9 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
     _name.dispose();
     _phone.dispose();
     _email.dispose();
+    _address.dispose();
+    _city.dispose();
+    _dob.dispose();
     super.dispose();
   }
 
@@ -480,9 +489,18 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
           name: name,
           phone: _phone.text.trim(),
           email: _email.text.trim(),
-          segment: _segment);
+          segment: _segment,
+          address: _address.text.trim(),
+          city: _city.text.trim(),
+          dob: _dob.text.trim());
     } else {
-      n.add(name: name, phone: _phone.text.trim(), email: _email.text.trim());
+      n.add(
+          name: name,
+          phone: _phone.text.trim(),
+          email: _email.text.trim(),
+          address: _address.text.trim(),
+          city: _city.text.trim(),
+          dob: _dob.text.trim());
     }
     Navigator.of(context).pop();
   }
@@ -494,7 +512,7 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
         child: Container(
           decoration: BoxDecoration(
             color: t.surface,
@@ -521,16 +539,35 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
                   ),
                 ]),
               ),
-              Padding(
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _field(t, 'Full name', _name, Icons.person_outline),
                     const SizedBox(height: 12),
-                    _field(t, 'Phone', _phone, Icons.phone_outlined),
+                    Row(children: [
+                      Expanded(
+                          child: _field(
+                              t, 'Phone', _phone, Icons.phone_outlined)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _field(t, 'Email', _email, Icons.mail_outline)),
+                    ]),
                     const SizedBox(height: 12),
-                    _field(t, 'Email', _email, Icons.mail_outline),
+                    _field(t, 'Address', _address, Icons.home_outlined),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                          child: _field(
+                              t, 'City', _city, Icons.location_city_outlined)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _field(t, 'Date of birth', _dob,
+                              Icons.cake_outlined)),
+                    ]),
                     if (_isEdit) ...[
                       const SizedBox(height: 14),
                       Text('Segment',
@@ -577,6 +614,8 @@ class _CustomerFormSheetState extends ConsumerState<_CustomerFormSheet> {
                       ]),
                     ],
                   ],
+                ),
+                  ),
                 ),
               ),
               Container(

@@ -15,7 +15,7 @@ class PdfService {
   static const PdfColor _muted = PdfColor.fromInt(0xFF6B6B6B);
   static const PdfColor _accent = PdfColor.fromInt(0xFF4F46E5);
 
-  static String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  static String _money(double v) => 'PKR ${v.toStringAsFixed(2)}';
 
   static String _stamp(DateTime d) {
     String two(int n) => n.toString().padLeft(2, '0');

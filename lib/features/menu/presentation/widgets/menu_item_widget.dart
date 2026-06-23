@@ -174,7 +174,7 @@ class _MenuItemWidgetState extends ConsumerState<MenuItemWidget> {
                           ),
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           child: Text(
-                            "\$${widget.item.price.toStringAsFixed(2)}",
+                            "PKR ${widget.item.price.toStringAsFixed(2)}",
                             style: const TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.bold,

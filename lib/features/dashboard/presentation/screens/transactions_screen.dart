@@ -323,7 +323,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           const Spacer(),
                           _SummaryPill(
                             label: "Sales",
-                            value: "\$${totalSales.toStringAsFixed(2)}",
+                            value: "PKR ${totalSales.toStringAsFixed(2)}",
                             icon: Icons.payments,
                             isDarkMode: isDarkMode,
                           ),
@@ -352,7 +352,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     children: [
                       _SummaryPill(
                         label: "Sales",
-                        value: "\$${totalSales.toStringAsFixed(2)}",
+                        value: "PKR ${totalSales.toStringAsFixed(2)}",
                         icon: Icons.payments,
                         isDarkMode: isDarkMode,
                         fullWidth: true,
@@ -510,7 +510,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                           Text(
-                            "\$${txn.total.toStringAsFixed(2)}",
+                            "PKR ${txn.total.toStringAsFixed(2)}",
                             style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20),
                           ),
                         ],
@@ -603,7 +603,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text("Total", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                  pw.Text("\$${txn.total.toStringAsFixed(2)}", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: gold)),
+                  pw.Text("PKR ${txn.total.toStringAsFixed(2)}", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: gold)),
                 ],
               ),
               pw.SizedBox(height: 16),
@@ -842,7 +842,7 @@ class _TransactionRow extends StatelessWidget {
           SizedBox(
             width: 90,
             child: Text(
-              "\$${txn.total.toStringAsFixed(2)}",
+              "PKR ${txn.total.toStringAsFixed(2)}",
               textAlign: TextAlign.right,
               style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
             ),
@@ -978,7 +978,7 @@ class _MobileTransactionCard extends StatelessWidget {
           Row(
             children: [
               Text(
-                "\$${txn.total.toStringAsFixed(2)}",
+                "PKR ${txn.total.toStringAsFixed(2)}",
                 style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20),
               ),
               const Spacer(),

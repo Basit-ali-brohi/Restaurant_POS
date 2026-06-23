@@ -157,7 +157,7 @@ class CartSidebar extends ConsumerWidget {
                           ),
                         ),
                         Text(
-                          "\$${total.toStringAsFixed(2)}",
+                          "PKR ${total.toStringAsFixed(2)}",
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -320,7 +320,7 @@ class CartSidebar extends ConsumerWidget {
                   pw.Expanded(
                     child: pw.Text("${item.quantity}x ${item.menuItem.name}"),
                   ),
-                  pw.Text("\$${(item.menuItem.price * item.quantity).toStringAsFixed(2)}"),
+                  pw.Text("PKR ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}"),
                 ],
               )),
               
@@ -332,7 +332,7 @@ class CartSidebar extends ConsumerWidget {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text("TOTAL", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
-                  pw.Text("\$${total.toStringAsFixed(2)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
+                  pw.Text("PKR ${total.toStringAsFixed(2)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
                 ],
               ),
               
@@ -444,7 +444,7 @@ class CartSidebar extends ConsumerWidget {
                                 style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 14),
                               ),
                               Text(
-                                "\$${(item.menuItem.price * item.quantity).toStringAsFixed(2)}",
+                                "PKR ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}",
                                 style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -467,7 +467,7 @@ class CartSidebar extends ConsumerWidget {
                         style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 18),
                       ),
                       Text(
-                        "\$${total.toStringAsFixed(2)}",
+                        "PKR ${total.toStringAsFixed(2)}",
                         style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 22),
                       ),
                     ],
@@ -703,7 +703,7 @@ class CartSidebar extends ConsumerWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    "\$${item.menuItem.price.toStringAsFixed(2)} x ${item.quantity}",
+                    "PKR ${item.menuItem.price.toStringAsFixed(2)} x ${item.quantity}",
                     style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54, fontSize: 12),
                   ),
                 ],
@@ -793,7 +793,7 @@ class CartSidebar extends ConsumerWidget {
                             ),
                           ),
                           Text(
-                            "\$${(ci.menuItem.price * ci.quantity).toStringAsFixed(2)}",
+                            "PKR ${(ci.menuItem.price * ci.quantity).toStringAsFixed(2)}",
                             style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87),
                           ),
                         ],
@@ -808,7 +808,7 @@ class CartSidebar extends ConsumerWidget {
                       style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Text(
-                      "\$${total.toStringAsFixed(2)}",
+                      "PKR ${total.toStringAsFixed(2)}",
                       style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20),
                     ),
                   ],
@@ -1035,11 +1035,11 @@ class CartSidebar extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildAmountTile("Subtotal", "\$${subtotal.toStringAsFixed(2)}", isDarkMode),
+                          child: _buildAmountTile("Subtotal", "PKR ${subtotal.toStringAsFixed(2)}", isDarkMode),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: _buildAmountTile("Payable", "\$${payable.toStringAsFixed(2)}", isDarkMode),
+                          child: _buildAmountTile("Payable", "PKR ${payable.toStringAsFixed(2)}", isDarkMode),
                         ),
                       ],
                     ),
@@ -1164,7 +1164,7 @@ class CartSidebar extends ConsumerWidget {
                                       child: TextField(
                                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         onChanged: (v) => setState(() => splitCash = double.tryParse(v) ?? 0),
-                                        decoration: const InputDecoration(hintText: "Cash \$", border: OutlineInputBorder()),
+                                        decoration: const InputDecoration(hintText: "Cash PKR ", border: OutlineInputBorder()),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -1172,7 +1172,7 @@ class CartSidebar extends ConsumerWidget {
                                       child: TextField(
                                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         onChanged: (v) => setState(() => splitCard = double.tryParse(v) ?? 0),
-                                        decoration: const InputDecoration(hintText: "Card \$", border: OutlineInputBorder()),
+                                        decoration: const InputDecoration(hintText: "Card PKR ", border: OutlineInputBorder()),
                                       ),
                                     ),
                                   ],
@@ -1373,7 +1373,7 @@ class CartSidebar extends ConsumerWidget {
                   child: pw.Row(
                     children: [
                       pw.Expanded(child: pw.Text("${ci.quantity}x ${ci.menuItem.name}")),
-                      pw.Text("\$${lineTotal.toStringAsFixed(2)}"),
+                      pw.Text("PKR ${lineTotal.toStringAsFixed(2)}"),
                     ],
                   ),
                 );
@@ -1386,7 +1386,7 @@ class CartSidebar extends ConsumerWidget {
                 children: [
                   pw.Text("Total", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                   pw.Text(
-                    "\$${total.toStringAsFixed(2)}",
+                    "PKR ${total.toStringAsFixed(2)}",
                     style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: gold),
                   ),
                 ],
@@ -1397,7 +1397,7 @@ class CartSidebar extends ConsumerWidget {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text("Discount", style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text("-\$${discountAmount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text("-PKR ${discountAmount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               if (taxRatePercent != null)
@@ -1405,7 +1405,7 @@ class CartSidebar extends ConsumerWidget {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text("Tax (${taxRatePercent.toStringAsFixed(1)}%)", style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text("\$${(total * (taxRatePercent / 100)).toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text("PKR ${(total * (taxRatePercent / 100)).toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               if (serviceRatePercent != null)
@@ -1413,7 +1413,7 @@ class CartSidebar extends ConsumerWidget {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text("Service (${serviceRatePercent.toStringAsFixed(1)}%)", style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text("\$${(total * (serviceRatePercent / 100)).toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text("PKR ${(total * (serviceRatePercent / 100)).toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               if (tipAmount != null && tipAmount > 0)
@@ -1421,7 +1421,7 @@ class CartSidebar extends ConsumerWidget {
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
                     pw.Text("Tip", style: const pw.TextStyle(fontSize: 12)),
-                    pw.Text("\$${tipAmount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
+                    pw.Text("PKR ${tipAmount.toStringAsFixed(2)}", style: const pw.TextStyle(fontSize: 12)),
                   ],
                 ),
               pw.SizedBox(height: 16),

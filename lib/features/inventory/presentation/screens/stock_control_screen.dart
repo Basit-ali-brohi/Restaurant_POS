@@ -24,7 +24,7 @@ class StockControlScreen extends ConsumerWidget {
       if (i > 0 && (parts[0].length - i) % 3 == 0) buf.write(',');
       buf.write(parts[0][i]);
     }
-    return '\$$buf.${parts[1]}';
+    return 'PKR $buf.${parts[1]}';
   }
 
   @override

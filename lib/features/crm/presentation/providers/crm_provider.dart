@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Loyalty tiers earned by lifetime points.
@@ -47,6 +48,9 @@ class Customer {
   final int visits;
   final int lastVisitDays;
   final CustomerSegment segment;
+  final String address;
+  final String city;
+  final String dob; // date of birth (yyyy-MM-dd or free text)
 
   const Customer({
     required this.id,
@@ -58,6 +62,9 @@ class Customer {
     required this.visits,
     required this.lastVisitDays,
     required this.segment,
+    this.address = '',
+    this.city = '',
+    this.dob = '',
   });
 
   LoyaltyTier get tier => LoyaltyTier.forPoints(points);
@@ -71,6 +78,9 @@ class Customer {
     int? visits,
     int? lastVisitDays,
     CustomerSegment? segment,
+    String? address,
+    String? city,
+    String? dob,
   }) =>
       Customer(
         id: id,
@@ -82,11 +92,18 @@ class Customer {
         visits: visits ?? this.visits,
         lastVisitDays: lastVisitDays ?? this.lastVisitDays,
         segment: segment ?? this.segment,
+        address: address ?? this.address,
+        city: city ?? this.city,
+        dob: dob ?? this.dob,
       );
 }
 
 class CustomersNotifier extends StateNotifier<List<Customer>> {
-  CustomersNotifier() : super(_seed);
+  CustomersNotifier() : super(const []) {
+    _load();
+  }
+
+  final _db = DbService.instance;
 
   static const List<Customer> _seed = [
     Customer(
@@ -153,11 +170,76 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
 
   int _seq = 6;
 
+  Customer _fromRow(Map<String, String?> r) => Customer(
+        id: r['id'] ?? '',
+        name: r['name'] ?? '',
+        phone: r['phone'] ?? '',
+        email: r['email'] ?? '',
+        points: int.tryParse(r['points'] ?? '') ?? 0,
+        lifetimeSpend: double.tryParse(r['lifetime_spend'] ?? '') ?? 0,
+        visits: int.tryParse(r['visits'] ?? '') ?? 0,
+        lastVisitDays: int.tryParse(r['last_visit_days'] ?? '') ?? 0,
+        segment: CustomerSegment.values.firstWhere(
+            (s) => s.name == r['segment'],
+            orElse: () => CustomerSegment.regular),
+        address: r['address'] ?? '',
+        city: r['city'] ?? '',
+        dob: r['dob'] ?? '',
+      );
+
+  Future<void> _load() async {
+    if (!_db.isConnected) {
+      state = _seed;
+      return;
+    }
+    final rows = await _db.rows('SELECT * FROM customers ORDER BY id');
+    if (rows.isEmpty) {
+      for (final c in _seed) {
+        await _upsert(c);
+      }
+      state = _seed;
+    } else {
+      state = rows.map(_fromRow).toList();
+      // Track the highest C-NNN id so new members don't collide.
+      for (final c in state) {
+        final n = int.tryParse(c.id.replaceAll(RegExp(r'[^0-9]'), ''));
+        if (n != null && n > _seq) _seq = n;
+      }
+    }
+  }
+
+  Future<void> _upsert(Customer c) => _db.exec(
+        'INSERT INTO customers (id,name,phone,email,points,lifetime_spend,visits,last_visit_days,segment,address,city,dob) '
+        'VALUES (:id,:name,:phone,:email,:points,:spend,:visits,:lvd,:seg,:addr,:city,:dob) '
+        'ON DUPLICATE KEY UPDATE name=:name, phone=:phone, email=:email, points=:points, '
+        'lifetime_spend=:spend, visits=:visits, last_visit_days=:lvd, segment=:seg, '
+        'address=:addr, city=:city, dob=:dob',
+        {
+          'id': c.id,
+          'name': c.name,
+          'phone': c.phone,
+          'email': c.email,
+          'points': c.points,
+          'spend': c.lifetimeSpend,
+          'visits': c.visits,
+          'lvd': c.lastVisitDays,
+          'seg': c.segment.name,
+          'addr': c.address,
+          'city': c.city,
+          'dob': c.dob,
+        },
+      );
+
   void addPoints(String id, int delta) {
+    Customer? changed;
     state = [
       for (final c in state)
-        if (c.id == id) c.copyWith(points: (c.points + delta).clamp(0, 1 << 31)) else c,
+        if (c.id == id)
+          (changed = c.copyWith(points: (c.points + delta).clamp(0, 1 << 31)))
+        else
+          c,
     ];
+    if (changed != null) _upsert(changed);
   }
 
   /// Create a new member. New customers default to the "New" segment.
@@ -165,6 +247,9 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
     required String name,
     required String phone,
     required String email,
+    String address = '',
+    String city = '',
+    String dob = '',
     int points = 0,
   }) {
     final c = Customer(
@@ -172,6 +257,9 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
+      address: address.trim(),
+      city: city.trim(),
+      dob: dob.trim(),
       points: points,
       lifetimeSpend: 0,
       visits: 0,
@@ -179,6 +267,7 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
       segment: CustomerSegment.newcomer,
     );
     state = [c, ...state];
+    _upsert(c);
     return c;
   }
 
@@ -186,18 +275,32 @@ class CustomersNotifier extends StateNotifier<List<Customer>> {
       {String? name,
       String? phone,
       String? email,
-      CustomerSegment? segment}) {
+      CustomerSegment? segment,
+      String? address,
+      String? city,
+      String? dob}) {
+    Customer? changed;
     state = [
       for (final c in state)
         if (c.id == id)
-          c.copyWith(name: name, phone: phone, email: email, segment: segment)
+          (changed = c.copyWith(
+              name: name,
+              phone: phone,
+              email: email,
+              segment: segment,
+              address: address,
+              city: city,
+              dob: dob))
         else
           c,
     ];
+    if (changed != null) _upsert(changed);
   }
 
-  void remove(String id) =>
-      state = state.where((c) => c.id != id).toList();
+  void remove(String id) {
+    state = state.where((c) => c.id != id).toList();
+    _db.exec('DELETE FROM customers WHERE id=:id', {'id': id});
+  }
 }
 
 final customersProvider =

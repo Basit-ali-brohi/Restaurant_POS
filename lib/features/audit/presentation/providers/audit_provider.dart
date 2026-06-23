@@ -125,7 +125,7 @@ final auditLogProvider = Provider<List<AuditEntry>>((ref) {
       category: AuditCategory.sales,
       action: o.payment != null ? 'Payment settled' : 'Bill generated',
       detail:
-          '#${o.billNumber} · $route · \$${o.breakdown.grandTotal.toStringAsFixed(2)}'
+          '#${o.billNumber} · $route · PKR ${o.breakdown.grandTotal.toStringAsFixed(2)}'
           '${o.payment != null ? ' · ${o.payment!.methodLabel}' : ''}',
       actor: 'Cashier',
       at: o.createdAt,

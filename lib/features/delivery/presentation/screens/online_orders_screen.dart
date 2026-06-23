@@ -177,7 +177,7 @@ class OnlineOrdersScreen extends ConsumerWidget {
         ),
         Expanded(
           flex: 2,
-          child: Text('\$${o.total.toStringAsFixed(2)}',
+          child: Text('PKR ${o.total.toStringAsFixed(2)}',
               style: TextStyle(
                   color: t.textPrimary,
                   fontWeight: FontWeight.w700,

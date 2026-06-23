@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/database/db_service.dart';
 import '../../domain/models/supplier_model.dart';
 import 'inventory_provider.dart';
 
@@ -12,59 +13,94 @@ final restockRequestsProvider = StateNotifierProvider<RestockNotifier, List<Rest
   return RestockNotifier(ref);
 });
 
+/// Supplier ledger, persisted to the MySQL `suppliers` table (SRS 4.4).
 class SuppliersNotifier extends StateNotifier<List<SupplierModel>> {
   SuppliersNotifier() : super(const []) {
     _load();
   }
 
+  final _db = DbService.instance;
+
+  static const List<SupplierModel> _seed = [
+    SupplierModel(id: 'S-001', name: 'Prime Foods Co.', contact: '+1 555-0101', category: 'Dry Goods', reliability: 97, leadDays: 2, outstandingBalance: 184200),
+    SupplierModel(id: 'S-002', name: 'Ocean Fresh', contact: '+1 555-0102', category: 'Seafood', reliability: 88, leadDays: 1, outstandingBalance: 92500),
+    SupplierModel(id: 'S-003', name: 'Green Valley Farm', contact: '+1 555-0103', category: 'Produce', reliability: 93, leadDays: 1, outstandingBalance: 41800),
+    SupplierModel(id: 'S-004', name: 'Dairy Best', contact: '+1 555-0104', category: 'Dairy', reliability: 99, leadDays: 1, outstandingBalance: 0),
+    SupplierModel(id: 'S-005', name: 'Bakery Pro', contact: '+1 555-0105', category: 'Bakery', reliability: 82, leadDays: 2, outstandingBalance: 23400),
+    SupplierModel(id: 'S-006', name: 'Spice Traders', contact: '+1 555-0106', category: 'Spices', reliability: 68, leadDays: 5, outstandingBalance: 67900),
+    SupplierModel(id: 'S-007', name: 'Beverage Hub', contact: '+1 555-0107', category: 'Beverages', reliability: 91, leadDays: 3, outstandingBalance: 15600),
+    SupplierModel(id: 'S-008', name: 'Meat Master', contact: '+1 555-0108', category: 'Meat', reliability: 95, leadDays: 2, outstandingBalance: 128300),
+  ];
+
+  SupplierModel _fromRow(Map<String, String?> r) => SupplierModel(
+        id: r['id'] ?? '',
+        name: r['name'] ?? '',
+        contact: r['contact'] ?? '',
+        category: r['category'] ?? 'General',
+        reliability: double.tryParse(r['reliability'] ?? '') ?? 95,
+        leadDays: int.tryParse(r['lead_days'] ?? '') ?? 2,
+        outstandingBalance: double.tryParse(r['outstanding_balance'] ?? '') ?? 0,
+      );
+
   Future<void> _load() async {
-    final box = Hive.isBoxOpen('suppliers') ? Hive.box('suppliers') : await Hive.openBox('suppliers');
-    final raw = box.get('items', defaultValue: []);
-    final list = List<Map>.from(raw).map((e) => SupplierModel.fromMap(Map<String, dynamic>.from(e))).toList();
-    if (list.isEmpty) {
-      state = [
-        const SupplierModel(id: 'S-001', name: 'Prime Foods Co.', contact: '+1 555-0101', category: 'Dry Goods', reliability: 97, leadDays: 2, outstandingBalance: 184200),
-        const SupplierModel(id: 'S-002', name: 'Ocean Fresh', contact: '+1 555-0102', category: 'Seafood', reliability: 88, leadDays: 1, outstandingBalance: 92500),
-        const SupplierModel(id: 'S-003', name: 'Green Valley Farm', contact: '+1 555-0103', category: 'Produce', reliability: 93, leadDays: 1, outstandingBalance: 41800),
-        const SupplierModel(id: 'S-004', name: 'Dairy Best', contact: '+1 555-0104', category: 'Dairy', reliability: 99, leadDays: 1, outstandingBalance: 0),
-        const SupplierModel(id: 'S-005', name: 'Bakery Pro', contact: '+1 555-0105', category: 'Bakery', reliability: 82, leadDays: 2, outstandingBalance: 23400),
-        const SupplierModel(id: 'S-006', name: 'Spice Traders', contact: '+1 555-0106', category: 'Spices', reliability: 68, leadDays: 5, outstandingBalance: 67900),
-        const SupplierModel(id: 'S-007', name: 'Beverage Hub', contact: '+1 555-0107', category: 'Beverages', reliability: 91, leadDays: 3, outstandingBalance: 15600),
-        const SupplierModel(id: 'S-008', name: 'Meat Master', contact: '+1 555-0108', category: 'Meat', reliability: 95, leadDays: 2, outstandingBalance: 128300),
-      ];
-      await _save();
+    if (!_db.isConnected) {
+      state = _seed; // offline fallback
+      return;
+    }
+    final rows = await _db.rows('SELECT * FROM suppliers ORDER BY id');
+    if (rows.isEmpty) {
+      // First run — seed the table so phpMyAdmin shows starter data.
+      for (final s in _seed) {
+        await _upsert(s);
+      }
+      state = _seed;
     } else {
-      state = list;
+      state = rows.map(_fromRow).toList();
     }
   }
 
-  Future<void> _save() async {
-    final box = Hive.isBoxOpen('suppliers') ? Hive.box('suppliers') : await Hive.openBox('suppliers');
-    await box.put('items', state.map((e) => e.toMap()).toList());
-  }
+  Future<void> _upsert(SupplierModel s) => _db.exec(
+        'INSERT INTO suppliers (id,name,contact,category,reliability,lead_days,outstanding_balance) '
+        'VALUES (:id,:name,:contact,:category,:rel,:lead,:bal) '
+        'ON DUPLICATE KEY UPDATE name=:name, contact=:contact, category=:category, '
+        'reliability=:rel, lead_days=:lead, outstanding_balance=:bal',
+        {
+          'id': s.id,
+          'name': s.name,
+          'contact': s.contact,
+          'category': s.category,
+          'rel': s.reliability,
+          'lead': s.leadDays,
+          'bal': s.outstandingBalance,
+        },
+      );
 
   Future<void> addSupplier(SupplierModel s) async {
     state = [...state, s];
-    await _save();
+    await _upsert(s);
   }
 
   Future<void> updateSupplier(SupplierModel s) async {
     state = [for (final e in state) if (e.id == s.id) s else e];
-    await _save();
+    await _upsert(s);
   }
 
   Future<void> removeSupplier(String id) async {
     state = state.where((e) => e.id != id).toList();
-    await _save();
+    await _db.exec('DELETE FROM suppliers WHERE id=:id', {'id': id});
   }
 
   /// Settle (pay off) a supplier's outstanding ledger balance.
   Future<void> settleBalance(String id) async {
+    SupplierModel? updated;
     state = [
       for (final e in state)
-        if (e.id == id) e.copyWith(outstandingBalance: 0) else e,
+        if (e.id == id)
+          (updated = e.copyWith(outstandingBalance: 0))
+        else
+          e,
     ];
-    await _save();
+    if (updated != null) await _upsert(updated);
   }
 }
 

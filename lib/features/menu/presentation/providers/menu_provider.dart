@@ -1,36 +1,89 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+import '../../../../core/database/db_service.dart';
 import '../../domain/models/menu_item_model.dart';
 
 /// Mutable menu catalogue — the shared source feeding the POS grid and the
 /// Menu Editor. CRUD operations here flow straight into the POS in real time
-/// and persist to Hive so edits survive restarts.
+/// and persist to the MySQL `menu_items` table so edits survive restarts.
 class MenuNotifier extends StateNotifier<List<MenuItemModel>> {
   MenuNotifier() : super(_seed) {
     _load();
   }
 
-  static const String _boxName = 'menu';
+  final _db = DbService.instance;
+
+  MenuItemModel _fromRow(Map<String, String?> r) {
+    List<String> list(String? raw) => (raw == null || raw.isEmpty)
+        ? const []
+        : List<String>.from(jsonDecode(raw) as List);
+    int? toInt(String? v) => v == null || v.isEmpty ? null : int.tryParse(v);
+    double? toDbl(String? v) =>
+        v == null || v.isEmpty ? null : double.tryParse(v);
+    return MenuItemModel(
+      id: r['id'] ?? '',
+      name: r['name'] ?? '',
+      description: r['description'] ?? '',
+      price: double.tryParse(r['price'] ?? '') ?? 0,
+      image: r['image'] ?? '',
+      category: r['category'] ?? '',
+      isBestSeller: (r['is_best_seller'] ?? '0') == '1',
+      isChefChoice: (r['is_chef_choice'] ?? '0') == '1',
+      isVeg: (r['is_veg'] ?? '0') == '1',
+      sku: r['sku'] ?? '',
+      available: (r['available'] ?? '1') == '1',
+      variations: list(r['variations']),
+      addOns: list(r['addons']),
+      happyHourPrice: toDbl(r['happy_hour_price']),
+      happyHourStart: toInt(r['happy_hour_start']),
+      happyHourEnd: toInt(r['happy_hour_end']),
+    );
+  }
 
   Future<void> _load() async {
-    final box = Hive.isBoxOpen(_boxName)
-        ? Hive.box(_boxName)
-        : await Hive.openBox(_boxName);
-    final raw = box.get('items', defaultValue: const []);
-    final list = List<Map>.from(raw)
-        .map((e) => MenuItemModel.fromMap(Map<String, dynamic>.from(e)))
-        .toList();
-    if (list.isNotEmpty) state = list;
+    if (!_db.isConnected) return; // keep seed
+    final rows = await _db.rows('SELECT * FROM menu_items');
+    if (rows.isEmpty) {
+      for (final m in _seed) {
+        await _upsert(m);
+      }
+    } else {
+      state = rows.map(_fromRow).toList();
+    }
   }
 
-  Future<void> _save() async {
-    final box = Hive.isBoxOpen(_boxName)
-        ? Hive.box(_boxName)
-        : await Hive.openBox(_boxName);
-    await box.put('items', state.map((e) => e.toMap()).toList());
-  }
+  Future<void> _upsert(MenuItemModel m) => _db.exec(
+        'INSERT INTO menu_items (id,name,description,price,image,category,'
+        'is_best_seller,is_chef_choice,is_veg,sku,available,variations,addons,'
+        'happy_hour_price,happy_hour_start,happy_hour_end) '
+        'VALUES (:id,:name,:desc,:price,:image,:cat,:best,:chef,:veg,:sku,:avail,'
+        ':vars,:addons,:hhp,:hhs,:hhe) '
+        'ON DUPLICATE KEY UPDATE name=:name, description=:desc, price=:price, '
+        'image=:image, category=:cat, is_best_seller=:best, is_chef_choice=:chef, '
+        'is_veg=:veg, sku=:sku, available=:avail, variations=:vars, addons=:addons, '
+        'happy_hour_price=:hhp, happy_hour_start=:hhs, happy_hour_end=:hhe',
+        {
+          'id': m.id,
+          'name': m.name,
+          'desc': m.description,
+          'price': m.price,
+          'image': m.image,
+          'cat': m.category,
+          'best': m.isBestSeller ? 1 : 0,
+          'chef': m.isChefChoice ? 1 : 0,
+          'veg': m.isVeg ? 1 : 0,
+          'sku': m.sku,
+          'avail': m.available ? 1 : 0,
+          'vars': jsonEncode(m.variations),
+          'addons': jsonEncode(m.addOns),
+          'hhp': m.happyHourPrice,
+          'hhs': m.happyHourStart,
+          'hhe': m.happyHourEnd,
+        },
+      );
 
   static const List<MenuItemModel> _seed = [
     MenuItemModel(
@@ -101,7 +154,7 @@ class MenuNotifier extends StateNotifier<List<MenuItemModel>> {
 
   void addItem(MenuItemModel item) {
     state = [...state, item];
-    _save();
+    _upsert(item);
   }
 
   /// Creates a new item with a generated id; returns it.
@@ -139,38 +192,43 @@ class MenuNotifier extends StateNotifier<List<MenuItemModel>> {
       for (final item in state)
         if (item.id == updated.id) updated else item,
     ];
-    _save();
+    _upsert(updated);
   }
 
   void deleteItem(String id) {
     state = state.where((item) => item.id != id).toList();
-    _save();
+    _db.exec('DELETE FROM menu_items WHERE id=:id', {'id': id});
   }
 
   void toggleAvailability(String id) {
+    MenuItemModel? changed;
     state = [
       for (final item in state)
-        if (item.id == id) item.copyWith(available: !item.available) else item,
+        if (item.id == id)
+          (changed = item.copyWith(available: !item.available))
+        else
+          item,
     ];
-    _save();
+    if (changed != null) _upsert(changed);
   }
 
   /// Configure (or clear) the happy-hour window for an item.
   void setHappyHour(String id,
       {double? price, int? startHour, int? endHour}) {
+    MenuItemModel? changed;
     state = [
       for (final item in state)
         if (item.id == id)
-          (price == null || startHour == null || endHour == null)
+          (changed = (price == null || startHour == null || endHour == null)
               ? item.copyWith(clearHappyHour: true)
               : item.copyWith(
                   happyHourPrice: price,
                   happyHourStart: startHour,
-                  happyHourEnd: endHour)
+                  happyHourEnd: endHour))
         else
           item,
     ];
-    _save();
+    if (changed != null) _upsert(changed);
   }
 }
 

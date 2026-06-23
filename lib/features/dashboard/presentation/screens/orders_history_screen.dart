@@ -316,7 +316,7 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
                   pw.Expanded(
                     child: pw.Text("${item.quantity}x ${item.menuItem.name}"),
                   ),
-                  pw.Text("\$${(item.menuItem.price * item.quantity).toStringAsFixed(2)}"),
+                  pw.Text("PKR ${(item.menuItem.price * item.quantity).toStringAsFixed(2)}"),
                 ],
               )),
               
@@ -328,7 +328,7 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text("TOTAL", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
-                  pw.Text("\$${total.toStringAsFixed(2)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
+                  pw.Text("PKR ${total.toStringAsFixed(2)}", style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 20)),
                 ],
               ),
               
@@ -429,7 +429,7 @@ class _TimelineCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text("Total: \$${totalAmount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+              Text("Total: PKR ${totalAmount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
             ],
           )
         : Row(
@@ -469,7 +469,7 @@ class _TimelineCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Text("Total: \$${totalAmount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
+              Text("Total: PKR ${totalAmount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.accent)),
               const Spacer(),
               Text("#${timeline.snapshot.id.substring(0, 6)}", style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54)),
             ],

@@ -254,20 +254,20 @@ class _MenuTile extends StatelessWidget {
                     Row(
                       children: [
                         if (item.isHappyHourActive()) ...[
-                          Text('\$${item.effectivePrice().toStringAsFixed(2)}',
+                          Text('PKR ${item.effectivePrice().toStringAsFixed(2)}',
                               style: const TextStyle(
                                   color: AppColors.success,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 14)),
                           const SizedBox(width: 5),
-                          Text('\$${item.price.toStringAsFixed(2)}',
+                          Text('PKR ${item.price.toStringAsFixed(2)}',
                               style: TextStyle(
                                   color: tones.textMuted,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 11,
                                   decoration: TextDecoration.lineThrough)),
                         ] else
-                          Text('\$${item.price.toStringAsFixed(2)}',
+                          Text('PKR ${item.price.toStringAsFixed(2)}',
                               style: const TextStyle(
                                   color: AppColors.accent,
                                   fontWeight: FontWeight.w800,
@@ -594,7 +594,7 @@ class _CartLine extends StatelessWidget {
                         fontSize: 14)),
               ),
               const SizedBox(width: 8),
-              Text('\$${line.total.toStringAsFixed(2)}',
+              Text('PKR ${line.total.toStringAsFixed(2)}',
                   style: TextStyle(
                       color: tones.textPrimary,
                       fontWeight: FontWeight.w800,
@@ -609,7 +609,7 @@ class _CartLine extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text('\$${line.unitPrice.toStringAsFixed(2)} ea',
+              Text('PKR ${line.unitPrice.toStringAsFixed(2)} ea',
                   style: TextStyle(color: tones.textMuted, fontSize: 12)),
               const Spacer(),
               _Stepper(
@@ -729,7 +729,7 @@ class _CheckoutFooter extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       fontSize: 16)),
               const Spacer(),
-              Text('\$${bill.grandTotal.toStringAsFixed(2)}',
+              Text('PKR ${bill.grandTotal.toStringAsFixed(2)}',
                   style: const TextStyle(
                       color: AppColors.accent,
                       fontWeight: FontWeight.w900,
@@ -808,7 +808,7 @@ class _CheckoutFooter extends StatelessWidget {
         children: [
           Text(label, style: TextStyle(color: tones.textSecondary, fontSize: 13)),
           const Spacer(),
-          Text('${negative ? '-' : ''}\$${value.abs().toStringAsFixed(2)}',
+          Text('${negative ? '-' : ''}PKR ${value.abs().toStringAsFixed(2)}',
               style: TextStyle(
                   color: tones.textPrimary,
                   fontWeight: FontWeight.w600,

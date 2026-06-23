@@ -23,7 +23,7 @@ class _SalesTransactionsScreenState
   String _range = 'Today';
   String _query = '';
 
-  static String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  static String _money(double v) => 'PKR ${v.toStringAsFixed(2)}';
 
   String _route(OrderRecord o) =>
       o.orderType == OrderType.dineIn && o.tableName != null

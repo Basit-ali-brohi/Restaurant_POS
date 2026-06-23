@@ -166,7 +166,7 @@ class _ItemCustomizationSheetState
                         fontWeight: FontWeight.w700,
                         fontSize: 18)),
                 const SizedBox(height: 2),
-                Text('Base \$${widget.item.price.toStringAsFixed(2)}',
+                Text('Base PKR ${widget.item.price.toStringAsFixed(2)}',
                     style: TextStyle(color: t.textMuted, fontSize: 13)),
               ],
             ),
@@ -241,7 +241,7 @@ class _ItemCustomizationSheetState
             Text(
               v.priceDelta == 0
                   ? 'Included'
-                  : '+\$${v.priceDelta.toStringAsFixed(2)}',
+                  : '+PKR ${v.priceDelta.toStringAsFixed(2)}',
               style: TextStyle(
                   color: v.priceDelta == 0 ? t.textMuted : AppColors.accent,
                   fontWeight: FontWeight.w600,
@@ -301,7 +301,7 @@ class _ItemCustomizationSheetState
                     fontSize: 13)),
             if (m.isPaid) ...[
               const SizedBox(width: 6),
-              Text('+\$${m.priceDelta.toStringAsFixed(2)}',
+              Text('+PKR ${m.priceDelta.toStringAsFixed(2)}',
                   style: const TextStyle(
                       color: AppColors.accent,
                       fontWeight: FontWeight.w700,
@@ -354,7 +354,7 @@ class _ItemCustomizationSheetState
                     const Icon(Icons.add_shopping_cart, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                        'Add  •  \$${(_unitPrice * _quantity).toStringAsFixed(2)}',
+                        'Add  •  PKR ${(_unitPrice * _quantity).toStringAsFixed(2)}',
                         style: const TextStyle(
                             fontWeight: FontWeight.w800, fontSize: 15)),
                   ],

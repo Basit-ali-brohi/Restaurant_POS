@@ -15,7 +15,7 @@ import '../providers/purchase_order_provider.dart';
 class PurchasingScreen extends ConsumerWidget {
   const PurchasingScreen({super.key});
 
-  static String _money(double v) => '\$${v.toStringAsFixed(2)}';
+  static String _money(double v) => 'PKR ${v.toStringAsFixed(2)}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -584,7 +584,7 @@ class _CreatePOSheetState extends ConsumerState<_CreatePOSheet> {
                                   style: TextStyle(
                                       color: t.textMuted, fontSize: 12.5)),
                               const SizedBox(width: 14),
-                              Text('\$${_lines[i].lineTotal.toStringAsFixed(2)}',
+                              Text('PKR ${_lines[i].lineTotal.toStringAsFixed(2)}',
                                   style: TextStyle(
                                       color: t.textPrimary,
                                       fontWeight: FontWeight.w700,
@@ -622,7 +622,7 @@ class _CreatePOSheetState extends ConsumerState<_CreatePOSheet> {
                 decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: t.border))),
                 child: Row(children: [
-                  Text('Total: \$${total.toStringAsFixed(2)}',
+                  Text('Total: PKR ${total.toStringAsFixed(2)}',
                       style: TextStyle(
                           color: t.textPrimary,
                           fontWeight: FontWeight.w800,

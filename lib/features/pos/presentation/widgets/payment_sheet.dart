@@ -176,7 +176,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
         children: [
           Text(label, style: TextStyle(color: t.textMuted, fontSize: 11.5)),
           const SizedBox(height: 2),
-          Text('\$${value.toStringAsFixed(2)}',
+          Text('PKR ${value.toStringAsFixed(2)}',
               style: TextStyle(
                   color: color, fontSize: 19, fontWeight: FontWeight.w900)),
         ],
@@ -251,7 +251,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                     fontSize: 18,
                     fontWeight: FontWeight.w800),
                 decoration: InputDecoration(
-                  prefixText: '\$ ',
+                  prefixText: 'PKR ',
                   prefixStyle: TextStyle(
                       color: t.textMuted,
                       fontSize: 18,
@@ -301,7 +301,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
           children: [
             _quickChip(t, 'Exact', () => _addTender(_remaining)),
             for (final v in [10.0, 20.0, 50.0, 100.0])
-              _quickChip(t, '+\$${v.toStringAsFixed(0)}', () => _addTender(v)),
+              _quickChip(t, '+PKR ${v.toStringAsFixed(0)}', () => _addTender(v)),
           ],
         ),
       ],
@@ -358,7 +358,7 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
                         fontWeight: FontWeight.w600,
                         fontSize: 13.5)),
                 const Spacer(),
-                Text('\$${_tenders[i].amount.toStringAsFixed(2)}',
+                Text('PKR ${_tenders[i].amount.toStringAsFixed(2)}',
                     style: TextStyle(
                         color: t.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -392,9 +392,9 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
           label: Text(
             _settled
                 ? (_change > 0
-                    ? 'Complete · Change \$${_change.toStringAsFixed(2)}'
+                    ? 'Complete · Change PKR ${_change.toStringAsFixed(2)}'
                     : 'Complete Payment')
-                : 'Pay \$${_remaining.toStringAsFixed(2)} more',
+                : 'Pay PKR ${_remaining.toStringAsFixed(2)} more',
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
           ),
           style: ElevatedButton.styleFrom(

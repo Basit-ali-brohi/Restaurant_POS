@@ -20,7 +20,7 @@ class RecipeCostingScreen extends ConsumerStatefulWidget {
 class _RecipeCostingScreenState extends ConsumerState<RecipeCostingScreen> {
   final Set<String> _expanded = {};
 
-  static String _m(double v) => '\$${v.toStringAsFixed(2)}';
+  static String _m(double v) => 'PKR ${v.toStringAsFixed(2)}';
   static String _pct(double v) => '${(v * 100).toStringAsFixed(1)}%';
 
   @override

@@ -94,7 +94,7 @@ class StaffScreen extends ConsumerWidget {
                                             border: Border.all(color: AppColors.accent),
                                           ),
                                           child: Text(
-                                            "\$${s.sales}",
+                                            "PKR ${s.sales}",
                                             style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
                                           ),
                                         ),
@@ -154,7 +154,7 @@ class StaffScreen extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(s.name, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text("Today's Sales: \$${s.sales}", style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
+                            Text("Today's Sales: PKR ${s.sales}", style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.black54)),
                           ],
                         ),
                       ),
@@ -296,7 +296,7 @@ class StaffScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: _buildReportStat("Sales Volume", "\$${s.sales}", Icons.attach_money, isDarkMode)),
+                          Expanded(child: _buildReportStat("Sales Volume", "PKR ${s.sales}", Icons.attach_money, isDarkMode)),
                           const SizedBox(width: 12),
                           Expanded(child: _buildReportStat("Shift Hours", "8h 30m", Icons.access_time, isDarkMode)),
                         ],
@@ -317,8 +317,8 @@ class StaffScreen extends ConsumerWidget {
                         child: ListView(
                           padding: const EdgeInsets.all(8),
                           children: [
-                            _buildActivityRow("Table 5 Order", "10:23 AM", "\$45.00", isDarkMode),
-                            _buildActivityRow("Table 2 Payment", "10:15 AM", "\$120.50", isDarkMode),
+                            _buildActivityRow("Table 5 Order", "10:23 AM", "PKR 45.00", isDarkMode),
+                            _buildActivityRow("Table 2 Payment", "10:15 AM", "PKR 120.50", isDarkMode),
                             _buildActivityRow("Shift Started", "09:00 AM", "-", isDarkMode),
                           ],
                         ),

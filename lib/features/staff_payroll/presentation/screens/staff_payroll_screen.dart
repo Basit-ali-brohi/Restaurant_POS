@@ -489,6 +489,10 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _salary;
   late final TextEditingController _allowance;
+  late final TextEditingController _email;
+  late final TextEditingController _phone;
+  late final TextEditingController _cnic;
+  late final TextEditingController _joinDate;
   late String _role;
   String? _error;
 
@@ -503,6 +507,10 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
         TextEditingController(text: e == null ? '' : e.basicSalary.round().toString());
     _allowance =
         TextEditingController(text: e == null ? '' : e.allowances.round().toString());
+    _email = TextEditingController(text: e?.email ?? '');
+    _phone = TextEditingController(text: e?.phone ?? '');
+    _cnic = TextEditingController(text: e?.cnic ?? '');
+    _joinDate = TextEditingController(text: e?.joinDate ?? '');
     _role = e?.role ?? PayrollNotifier.roles.first;
   }
 
@@ -511,6 +519,10 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
     _name.dispose();
     _salary.dispose();
     _allowance.dispose();
+    _email.dispose();
+    _phone.dispose();
+    _cnic.dispose();
+    _joinDate.dispose();
     super.dispose();
   }
 
@@ -529,9 +541,24 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
     final n = ref.read(payrollProvider.notifier);
     if (_isEdit) {
       n.update(widget.existing!.id,
-          name: name, role: _role, basicSalary: salary, allowances: allowance);
+          name: name,
+          role: _role,
+          basicSalary: salary,
+          allowances: allowance,
+          email: _email.text.trim(),
+          phone: _phone.text.trim(),
+          cnic: _cnic.text.trim(),
+          joinDate: _joinDate.text.trim());
     } else {
-      n.add(name: name, role: _role, basicSalary: salary, allowances: allowance);
+      n.add(
+          name: name,
+          role: _role,
+          basicSalary: salary,
+          allowances: allowance,
+          email: _email.text.trim(),
+          phone: _phone.text.trim(),
+          cnic: _cnic.text.trim(),
+          joinDate: _joinDate.text.trim());
     }
     Navigator.of(context).pop();
   }
@@ -543,7 +570,7 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 660),
         child: Container(
           decoration: BoxDecoration(
             color: t.surface,
@@ -570,7 +597,9 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
                   ),
                 ]),
               ),
-              Padding(
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,6 +650,26 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
                             number: true),
                       ),
                     ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                          child: _field(
+                              t, 'Email', _email, Icons.mail_outline)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _field(
+                              t, 'Phone', _phone, Icons.phone_outlined)),
+                    ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      Expanded(
+                          child: _field(t, 'CNIC', _cnic,
+                              Icons.badge_outlined)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: _field(t, 'Join date', _joinDate,
+                              Icons.event_outlined)),
+                    ]),
                     if (_error != null) ...[
                       const SizedBox(height: 12),
                       Row(children: [
@@ -633,6 +682,8 @@ class _StaffFormSheetState extends ConsumerState<_StaffFormSheet> {
                       ]),
                     ],
                   ],
+                ),
+                  ),
                 ),
               ),
               Container(

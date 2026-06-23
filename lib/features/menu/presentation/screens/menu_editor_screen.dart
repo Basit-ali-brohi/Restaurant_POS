@@ -379,7 +379,7 @@ class _MenuEditorScreenState extends ConsumerState<MenuEditorScreen> {
                         fontSize: 14)),
                 const SizedBox(height: 2),
                 Row(children: [
-                  Text('\$${item.price.toStringAsFixed(2)}',
+                  Text('PKR ${item.price.toStringAsFixed(2)}',
                       style: TextStyle(
                           color: t.textPrimary,
                           fontWeight: FontWeight.w700,
@@ -394,7 +394,7 @@ class _MenuEditorScreenState extends ConsumerState<MenuEditorScreen> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                          '\$${item.happyHourPrice!.toStringAsFixed(0)} · ${item.happyHourLabel}',
+                          'PKR ${item.happyHourPrice!.toStringAsFixed(0)} · ${item.happyHourLabel}',
                           style: const TextStyle(
                               color: AppColors.success,
                               fontWeight: FontWeight.w700,
@@ -572,7 +572,7 @@ class _MenuEditorScreenState extends ConsumerState<MenuEditorScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _fieldLabel(t, 'Price (\$)'),
+                            _fieldLabel(t, 'Price (PKR )'),
                             _input(t, _price, '0.00',
                                 keyboard: const TextInputType.numberWithOptions(
                                     decimal: true)),
@@ -994,7 +994,7 @@ class _HappyHourDialogState extends ConsumerState<_HappyHourDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Base price: \$${widget.item.price.toStringAsFixed(2)}',
+                    Text('Base price: PKR ${widget.item.price.toStringAsFixed(2)}',
                         style: TextStyle(
                             color: t.textSecondary,
                             fontSize: 13,

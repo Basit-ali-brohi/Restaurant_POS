@@ -75,7 +75,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
                   children: [
                     _StatCard(
                       title: "Total Value",
-                      value: "\$12,450",
+                      value: "PKR 12,450",
                       icon: Icons.monetization_on,
                       color: Colors.greenAccent,
                       isDarkMode: isDarkMode,
@@ -101,7 +101,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
               else
                 Row(
                   children: [
-                    Expanded(child: _StatCard(title: "Total Value", value: "\$12,450", icon: Icons.monetization_on, color: Colors.greenAccent, isDarkMode: isDarkMode)),
+                    Expanded(child: _StatCard(title: "Total Value", value: "PKR 12,450", icon: Icons.monetization_on, color: Colors.greenAccent, isDarkMode: isDarkMode)),
                     const SizedBox(width: 16),
                     Expanded(child: _StatCard(title: "Low Stock Items", value: "${allItems.where((i) => i.status == 'Low').length}", icon: Icons.warning_amber, color: Colors.orangeAccent, isDarkMode: isDarkMode)),
                     const SizedBox(width: 16),
