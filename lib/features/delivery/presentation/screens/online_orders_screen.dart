@@ -40,6 +40,30 @@ class OnlineOrdersScreen extends ConsumerWidget {
                 ],
               ),
               const Spacer(),
+              SizedBox(
+                height: 42,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(onlineOrdersProvider.notifier).addSimulated();
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text('New online order received'),
+                      duration: Duration(milliseconds: 1000),
+                      backgroundColor: AppColors.accent,
+                    ));
+                  },
+                  icon: const Icon(Icons.add_circle_outline, size: 18),
+                  label: const Text('Simulate Order',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

@@ -272,6 +272,40 @@ CREATE TABLE IF NOT EXISTS order_lines (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ''',
     '''
+CREATE TABLE IF NOT EXISTS recipes (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(64),
+  yield_portions INT DEFAULT 1,
+  selling_price DOUBLE DEFAULT 0,
+  ingredients LONGTEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
+CREATE TABLE IF NOT EXISTS branches (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  location VARCHAR(128),
+  revenue DOUBLE DEFAULT 0,
+  orders INT DEFAULT 0,
+  avg_ticket DOUBLE DEFAULT 0,
+  growth DOUBLE DEFAULT 0,
+  is_open TINYINT DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
+CREATE TABLE IF NOT EXISTS riders (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  zone VARCHAR(128),
+  on_trip TINYINT DEFAULT 0,
+  active_trips INT DEFAULT 0,
+  completed_today INT DEFAULT 0,
+  commission DOUBLE DEFAULT 0,
+  progress DOUBLE DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
 CREATE TABLE IF NOT EXISTS app_state (
   id VARCHAR(64) PRIMARY KEY,
   value LONGTEXT

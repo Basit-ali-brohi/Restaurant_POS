@@ -26,13 +26,38 @@ class DeliveryHubScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Delivery Hub',
-                style: TextStyle(
-                    color: t.textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800)),
-            Text('Fleet tracking, trip progress and rider commission ledgers.',
-                style: TextStyle(color: t.textMuted, fontSize: 13)),
+            Row(children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Delivery Hub',
+                      style: TextStyle(
+                          color: t.textPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800)),
+                  Text(
+                      'Fleet tracking, trip progress and rider commission ledgers.',
+                      style: TextStyle(color: t.textMuted, fontSize: 13)),
+                ],
+              ),
+              const Spacer(),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddRider(context, ref),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Rider',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ]),
             const SizedBox(height: 18),
             Wrap(spacing: 16, runSpacing: 16, children: [
               _kpi(t, 'Active Riders', '$active / ${riders.length}',
@@ -56,7 +81,9 @@ class DeliveryHubScreen extends ConsumerWidget {
               return Wrap(
                 spacing: 16,
                 runSpacing: 16,
-                children: [for (final r in riders) _riderCard(t, r, w)],
+                children: [
+                  for (final r in riders) _riderCard(context, ref, t, r, w)
+                ],
               );
             }),
           ],
@@ -98,7 +125,8 @@ class DeliveryHubScreen extends ConsumerWidget {
     );
   }
 
-  Widget _riderCard(AppTones t, Rider r, double w) {
+  Widget _riderCard(
+      BuildContext context, WidgetRef ref, AppTones t, Rider r, double w) {
     return Container(
       width: w,
       padding: const EdgeInsets.all(16),
@@ -144,6 +172,19 @@ class DeliveryHubScreen extends ConsumerWidget {
                       color: r.onTrip ? AppColors.warning : AppColors.success,
                       fontWeight: FontWeight.w700,
                       fontSize: 10.5)),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () {
+                ref.read(ridersProvider.notifier).remove(r.id);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Removed ${r.name}'),
+                  duration: const Duration(milliseconds: 900),
+                  backgroundColor: AppColors.error,
+                ));
+              },
+              child: Icon(Icons.delete_outline,
+                  size: 17, color: AppColors.error.withValues(alpha: 0.8)),
             ),
           ]),
           const SizedBox(height: 14),
@@ -191,6 +232,113 @@ class DeliveryHubScreen extends ConsumerWidget {
           ]),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAddRider(BuildContext context, WidgetRef ref) async {
+    final t = AppTones(ref.read(themeProvider));
+    final name = TextEditingController();
+    final zone = TextEditingController();
+    String? error;
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => StatefulBuilder(builder: (context, setLocal) {
+        InputDecoration dec(String h, IconData ic) => InputDecoration(
+              isDense: true,
+              hintText: h,
+              hintStyle: TextStyle(color: t.textMuted),
+              prefixIcon: Icon(ic, size: 18, color: t.textMuted),
+              filled: true,
+              fillColor: t.surfaceAlt,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: t.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide:
+                    const BorderSide(color: AppColors.accent, width: 1.5),
+              ),
+            );
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: t.border),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Add Rider',
+                      style: TextStyle(
+                          color: t.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 16),
+                  TextField(
+                      controller: name,
+                      style: TextStyle(color: t.textPrimary),
+                      decoration: dec('Rider name', Icons.person_outline)),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: zone,
+                      style: TextStyle(color: t.textPrimary),
+                      decoration:
+                          dec('Zone · area (e.g. Zone A · Gulberg)',
+                              Icons.map_outlined)),
+                  if (error != null) ...[
+                    const SizedBox(height: 10),
+                    Text(error!,
+                        style: const TextStyle(
+                            color: AppColors.error, fontSize: 12.5)),
+                  ],
+                  const SizedBox(height: 18),
+                  Row(children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child:
+                          Text('Cancel', style: TextStyle(color: t.textMuted)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (name.text.trim().isEmpty) {
+                          setLocal(() => error = 'Rider name is required');
+                          return;
+                        }
+                        ref.read(ridersProvider.notifier).add(
+                            name: name.text.trim(),
+                            zone: zone.text.trim().isEmpty
+                                ? 'Unassigned'
+                                : zone.text.trim());
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Add Rider',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 

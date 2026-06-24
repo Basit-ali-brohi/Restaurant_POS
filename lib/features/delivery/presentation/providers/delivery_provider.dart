@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 
 /// Acquisition channels for incoming online orders.
@@ -95,6 +96,30 @@ class OnlineOrdersNotifier extends StateNotifier<List<OnlineOrder>> {
         if (o.id == id) o.copyWith(riderId: riderId) else o,
     ];
   }
+
+  /// Demo helper: injects a fresh random incoming order from an aggregator.
+  void addSimulated() {
+    const names = ['Bilal A.', 'Sana K.', 'Usman R.', 'Hina S.', 'Ali M.'];
+    const areas = ['Gulberg', 'DHA Phase 2', 'Bahria Town', 'Clifton', 'Johar Town'];
+    final rnd = DateTime.now().millisecondsSinceEpoch;
+    final channel = OrderChannel.values[rnd % OrderChannel.values.length];
+    final prefix = channel == OrderChannel.web
+        ? 'W'
+        : channel == OrderChannel.foodpanda
+            ? 'FP'
+            : 'CR';
+    final order = OnlineOrder(
+      id: '$prefix-${5000 + rnd % 5000}',
+      channel: channel,
+      customer: names[rnd % names.length],
+      area: areas[(rnd ~/ 7) % areas.length],
+      items: 1 + rnd % 5,
+      total: 10.0 + rnd % 80,
+      status: OnlineStatus.incoming,
+      minsAgo: 0,
+    );
+    state = [order, ...state];
+  }
 }
 
 final onlineOrdersProvider =
@@ -124,11 +149,86 @@ class Rider {
   });
 }
 
-final ridersProvider = Provider<List<Rider>>((ref) {
-  return const [
+class RidersNotifier extends StateNotifier<List<Rider>> {
+  RidersNotifier() : super(_seed) {
+    _load();
+  }
+
+  final _db = DbService.instance;
+  int _seq = 4;
+
+  static const List<Rider> _seed = [
     Rider(id: 'D-01', name: 'Imran Ali', zone: 'Zone A · Model Town', onTrip: true, activeTrips: 1, completedToday: 12, commission: 1840, progress: 0.72),
     Rider(id: 'D-02', name: 'Faisal Khan', zone: 'Zone B · DHA', onTrip: true, activeTrips: 1, completedToday: 9, commission: 1360, progress: 0.35),
     Rider(id: 'D-03', name: 'Naveed Iqbal', zone: 'Zone C · Cantt', onTrip: false, activeTrips: 0, completedToday: 15, commission: 2210, progress: 1.0),
     Rider(id: 'D-04', name: 'Zara Sheikh', zone: 'Zone A · Gulberg', onTrip: false, activeTrips: 0, completedToday: 7, commission: 980, progress: 0.0),
   ];
-});
+
+  Rider _fromRow(Map<String, String?> r) => Rider(
+        id: r['id'] ?? '',
+        name: r['name'] ?? '',
+        zone: r['zone'] ?? '',
+        onTrip: (r['on_trip'] ?? '0') == '1',
+        activeTrips: int.tryParse(r['active_trips'] ?? '') ?? 0,
+        completedToday: int.tryParse(r['completed_today'] ?? '') ?? 0,
+        commission: double.tryParse(r['commission'] ?? '') ?? 0,
+        progress: double.tryParse(r['progress'] ?? '') ?? 0,
+      );
+
+  Future<void> _load() async {
+    if (!_db.isConnected) return;
+    final rows = await _db.rows('SELECT * FROM riders ORDER BY id');
+    if (rows.isEmpty) {
+      for (final r in _seed) {
+        await _persist(r);
+      }
+    } else {
+      state = rows.map(_fromRow).toList();
+      for (final r in state) {
+        final n = int.tryParse(r.id.replaceAll(RegExp(r'[^0-9]'), ''));
+        if (n != null && n > _seq) _seq = n;
+      }
+    }
+  }
+
+  Future<void> _persist(Rider r) => _db.exec(
+        'INSERT INTO riders (id,name,zone,on_trip,active_trips,completed_today,commission,progress) '
+        'VALUES (:id,:name,:zone,:trip,:active,:done,:comm,:prog) '
+        'ON DUPLICATE KEY UPDATE name=:name, zone=:zone, on_trip=:trip, '
+        'active_trips=:active, completed_today=:done, commission=:comm, progress=:prog',
+        {
+          'id': r.id,
+          'name': r.name,
+          'zone': r.zone,
+          'trip': r.onTrip ? 1 : 0,
+          'active': r.activeTrips,
+          'done': r.completedToday,
+          'comm': r.commission,
+          'prog': r.progress,
+        },
+      );
+
+  void add({required String name, required String zone}) {
+    final rider = Rider(
+      id: 'D-${(++_seq).toString().padLeft(2, '0')}',
+      name: name.trim(),
+      zone: zone.trim(),
+      onTrip: false,
+      activeTrips: 0,
+      completedToday: 0,
+      commission: 0,
+      progress: 0,
+    );
+    state = [...state, rider];
+    _persist(rider);
+  }
+
+  void remove(String id) {
+    state = state.where((r) => r.id != id).toList();
+    _db.exec('DELETE FROM riders WHERE id=:id', {'id': id});
+  }
+}
+
+final ridersProvider =
+    StateNotifierProvider<RidersNotifier, List<Rider>>(
+        (ref) => RidersNotifier());
