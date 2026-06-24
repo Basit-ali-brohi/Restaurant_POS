@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/legacy.dart';
+import '../../../../core/database/db_service.dart';
 import '../../domain/models/table_model.dart';
- 
+
 final selectedTableNameProvider = StateProvider<String?>((ref) => null);
 
 final tableProvider = StateNotifierProvider<TableNotifier, List<TableModel>>((ref) {
@@ -8,11 +9,57 @@ final tableProvider = StateNotifierProvider<TableNotifier, List<TableModel>>((re
 });
 
 class TableNotifier extends StateNotifier<List<TableModel>> {
-  TableNotifier() : super([]) {
-    _loadInitialData();
+  TableNotifier() : super(_seed()) {
+    _load();
   }
 
-  void _loadInitialData() {
+  final _db = DbService.instance;
+
+  TableModel _fromRow(Map<String, String?> r) => TableModel(
+        id: r['id'] ?? '',
+        name: r['name'] ?? '',
+        seats: int.tryParse(r['seats'] ?? '') ?? 2,
+        status: TableStatus.values.firstWhere((s) => s.name == r['status'],
+            orElse: () => TableStatus.available),
+        x: double.tryParse(r['x'] ?? '') ?? 0,
+        y: double.tryParse(r['y'] ?? '') ?? 0,
+        section: r['section'] ?? 'Ground Floor',
+      );
+
+  Future<void> _load() async {
+    if (!_db.isConnected) return;
+    final rows = await _db.rows('SELECT * FROM restaurant_tables ORDER BY id');
+    if (rows.isEmpty) {
+      for (final t in state) {
+        await _persist(t);
+      }
+    } else {
+      state = rows.map(_fromRow).toList();
+    }
+  }
+
+  Future<void> _persist(TableModel t) => _db.exec(
+        'INSERT INTO restaurant_tables (id,name,seats,status,x,y,section) '
+        'VALUES (:id,:name,:seats,:status,:x,:y,:section) '
+        'ON DUPLICATE KEY UPDATE name=:name, seats=:seats, status=:status, '
+        'x=:x, y=:y, section=:section',
+        {
+          'id': t.id,
+          'name': t.name,
+          'seats': t.seats,
+          'status': t.status.name,
+          'x': t.x,
+          'y': t.y,
+          'section': t.section,
+        },
+      );
+
+  void _persistId(String id) {
+    final t = byId(id);
+    if (t != null) _persist(t);
+  }
+
+  static List<TableModel> _seed() {
     final List<TableModel> tables = [];
     final now = DateTime.now();
 
@@ -55,7 +102,7 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
     addSection('F', 'First Floor', 40, (i) => i % 4 == 0 ? 8 : 4);
     addSection('O', 'Outdoor', 20, (i) => 4);
 
-    state = tables;
+    return tables;
   }
 
   /// Binds an order to a table: marks it occupied and stamps the start time so
@@ -73,6 +120,7 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           table,
     ];
+    _persistId(id);
   }
 
   TableModel? byId(String id) {
@@ -97,6 +145,7 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(id);
   }
 
   /// Returns a Cleaning table to service.
@@ -109,6 +158,7 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(id);
   }
 
   /// Moves the active seating/order from one table to another empty table.
@@ -130,6 +180,8 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(fromId);
+    _persistId(toId);
   }
 
   /// Merges one table's party into another; the source table is freed.
@@ -162,6 +214,8 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(fromId);
+    _persistId(toId);
   }
 
   void updateTablePosition(String id, double x, double y) {
@@ -169,13 +223,15 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
       for (final table in state)
         if (table.id == id) table.copyWith(x: x, y: y) else table,
     ];
+    _persistId(id);
   }
-  
+
   void updateTableStatus(String id, TableStatus status) {
     state = [
       for (final table in state)
         if (table.id == id) table.copyWith(status: status) else table,
     ];
+    _persistId(id);
   }
 
   /// Takes a table out of service (maintenance/damage), clearing any seating.
@@ -192,6 +248,7 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(id);
   }
 
   /// Returns an out-of-service table to the available pool.
@@ -204,5 +261,6 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
         else
           t,
     ];
+    _persistId(id);
   }
 }

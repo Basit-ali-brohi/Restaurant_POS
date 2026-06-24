@@ -95,6 +95,21 @@ class DbService {
     }
   }
 
+  // --- Singleton state helpers (shift, settings, …) --------------------------
+
+  /// Reads a single JSON blob keyed by [id] from `app_state` (null if absent).
+  Future<String?> loadState(String id) async {
+    final r = await rows('SELECT value FROM app_state WHERE id=:id', {'id': id});
+    return r.isEmpty ? null : r.first['value'];
+  }
+
+  /// Writes a single JSON blob keyed by [id] into `app_state`.
+  Future<void> saveState(String id, String value) => exec(
+        'INSERT INTO app_state (id,value) VALUES (:id,:v) '
+        'ON DUPLICATE KEY UPDATE value=:v',
+        {'id': id, 'v': value},
+      );
+
   // --- Schema ----------------------------------------------------------------
 
   Future<void> _createSchema() async {
@@ -254,6 +269,24 @@ CREATE TABLE IF NOT EXISTS order_lines (
   modifiers TEXT,
   quantity INT,
   unit_price DOUBLE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
+CREATE TABLE IF NOT EXISTS app_state (
+  id VARCHAR(64) PRIMARY KEY,
+  value LONGTEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
+CREATE TABLE IF NOT EXISTS sales (
+  id VARCHAR(64) PRIMARY KEY,
+  table_label VARCHAR(64),
+  payment_method VARCHAR(64),
+  total DOUBLE DEFAULT 0,
+  time DATETIME,
+  status VARCHAR(32),
+  cash_amount DOUBLE DEFAULT 0,
+  card_amount DOUBLE DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ''',
     '''

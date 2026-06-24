@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../../../core/database/db_service.dart';
 
 enum ShiftEventType { opened, cashIn, cashOut, closed }
 
@@ -85,11 +88,14 @@ class ShiftNotifier extends StateNotifier<ShiftState> {
     _load();
   }
 
+  final _db = DbService.instance;
+
   Future<void> _load() async {
-    final box = await Hive.openBox('shift');
-    final m = box.get('state');
-    if (m != null) {
-      final Map<String, dynamic> data = Map<String, dynamic>.from(m);
+    if (!_db.isConnected) return;
+    final raw = await _db.loadState('shift');
+    if (raw != null && raw.isNotEmpty) {
+      final Map<String, dynamic> data =
+          Map<String, dynamic>.from(jsonDecode(raw) as Map);
       final List ev = (data['events'] as List? ?? []);
       final events = ev.map((e) {
         final mm = Map<String, dynamic>.from(e);
@@ -112,22 +118,23 @@ class ShiftNotifier extends StateNotifier<ShiftState> {
   }
 
   Future<void> _save() async {
-    final box = Hive.isBoxOpen('shift') ? Hive.box('shift') : await Hive.openBox('shift');
-    await box.put('state', {
-      'isOpen': state.isOpen,
-      'openedAt': state.openedAt?.toIso8601String(),
-      'closedAt': state.closedAt?.toIso8601String(),
-      'openingCash': state.openingCash,
-      'closingCash': state.closingCash,
-      'events': state.events
-          .map((e) => {
-                'time': e.time.toIso8601String(),
-                'type': e.type.name,
-                'amount': e.amount,
-                'note': e.note,
-              })
-          .toList(),
-    });
+    await _db.saveState(
+        'shift',
+        jsonEncode({
+          'isOpen': state.isOpen,
+          'openedAt': state.openedAt?.toIso8601String(),
+          'closedAt': state.closedAt?.toIso8601String(),
+          'openingCash': state.openingCash,
+          'closingCash': state.closingCash,
+          'events': state.events
+              .map((e) => {
+                    'time': e.time.toIso8601String(),
+                    'type': e.type.name,
+                    'amount': e.amount,
+                    'note': e.note,
+                  })
+              .toList(),
+        }));
   }
 
   void openShift({required double openingCash, String note = ''}) {

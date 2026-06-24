@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../pos/domain/models/pos_models.dart';
 import '../../../pos/presentation/providers/pos_providers.dart';
@@ -45,7 +46,35 @@ final auditFilterProvider = StateProvider<AuditCategory?>((ref) => null);
 /// state (logins, role switches, blocked-access attempts, approvals) append
 /// here so they appear in the unified trail.
 class AuditTrailNotifier extends StateNotifier<List<AuditEntry>> {
-  AuditTrailNotifier() : super(const []);
+  AuditTrailNotifier() : super(const []) {
+    _load();
+  }
+
+  final _db = DbService.instance;
+
+  static String _fmt(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)} '
+        '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
+  }
+
+  Future<void> _load() async {
+    if (!_db.isConnected) return;
+    final rows =
+        await _db.rows('SELECT * FROM audit_log ORDER BY at DESC LIMIT 300');
+    state = [
+      for (final r in rows)
+        AuditEntry(
+          category: AuditCategory.values.firstWhere(
+              (c) => c.name == r['category'],
+              orElse: () => AuditCategory.system),
+          action: r['action'] ?? '',
+          detail: r['detail'] ?? '',
+          actor: r['actor'] ?? '',
+          at: DateTime.tryParse(r['at'] ?? '') ?? DateTime.now(),
+        ),
+    ];
+  }
 
   void log({
     required AuditCategory category,
@@ -53,16 +82,25 @@ class AuditTrailNotifier extends StateNotifier<List<AuditEntry>> {
     required String detail,
     required String actor,
   }) {
-    state = [
-      AuditEntry(
-        category: category,
-        action: action,
-        detail: detail,
-        actor: actor,
-        at: DateTime.now(),
-      ),
-      ...state,
-    ];
+    final entry = AuditEntry(
+      category: category,
+      action: action,
+      detail: detail,
+      actor: actor,
+      at: DateTime.now(),
+    );
+    state = [entry, ...state];
+    _db.exec(
+      'INSERT INTO audit_log (category,action,detail,actor,at) '
+      'VALUES (:c,:a,:d,:ac,:at)',
+      {
+        'c': category.name,
+        'a': action,
+        'd': detail,
+        'ac': actor,
+        'at': _fmt(entry.at),
+      },
+    );
   }
 }
 
