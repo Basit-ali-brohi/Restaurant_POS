@@ -8,11 +8,10 @@ import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/glass_container.dart';
 import '../../../kitchen/presentation/providers/orders_history_provider.dart';
-import '../../../kitchen/presentation/providers/kitchen_provider.dart';
+import '../../../kitchen/presentation/providers/kds_provider.dart';
 import '../../../kitchen/domain/models/order_model.dart';
 import '../providers/sales_provider.dart';
 import '../../../cart/domain/models/cart_item_model.dart';
-import 'package:uuid/uuid.dart';
 
 class OrdersHistoryScreen extends ConsumerStatefulWidget {
   const OrdersHistoryScreen({super.key});
@@ -270,19 +269,15 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
   }
 
   Future<void> _resendToKDS(BuildContext context, OrderTimeline tl) async {
-    final notifier = ref.read(kitchenProvider.notifier);
-    final history = ref.read(ordersTimelineProvider.notifier);
-    final newOrder = OrderModel(
-      id: const Uuid().v4(),
-      tableName: tl.snapshot.tableName,
-      items: tl.snapshot.items,
-      status: OrderStatus.pending,
-      timestamp: DateTime.now(),
-      orderType: tl.snapshot.orderType,
-    );
-    notifier.addOrder(newOrder);
-    history.logResent(tl.snapshot.id);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Order re-sent to KDS")));
+    // Re-open this order's kitchen tickets so they re-appear on the live KDS
+    // queue (the KDS reads the shared order repository + per-station stages).
+    final kitchen = ref.read(kitchenProvider.notifier);
+    for (final station in KitchenStation.values) {
+      kitchen.setStage('${tl.snapshot.id}::${station.name}', TicketStage.pending);
+    }
+    ref.read(ordersTimelineProvider.notifier).logResent(tl.snapshot.id);
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Order re-sent to KDS — check Kitchen Display")));
   }
   Future<void> _printReceipt(List<CartItemModel> items, double total, String tableName) async {
     final doc = pw.Document();
