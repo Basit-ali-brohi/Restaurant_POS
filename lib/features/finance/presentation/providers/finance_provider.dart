@@ -26,6 +26,7 @@ class Expense {
   final double amount;
   final String dateLabel;
   final bool hasInvoice;
+  final String invoiceFile; // attached invoice file name (empty = none)
 
   const Expense({
     required this.id,
@@ -34,6 +35,7 @@ class Expense {
     required this.amount,
     required this.dateLabel,
     required this.hasInvoice,
+    this.invoiceFile = '',
   });
 }
 
@@ -62,6 +64,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
         amount: double.tryParse(r['amount'] ?? '') ?? 0,
         dateLabel: r['date_label'] ?? '',
         hasInvoice: (r['has_invoice'] ?? '1') == '1',
+        invoiceFile: r['invoice_file'] ?? '',
       );
 
   Future<void> _load() async {
@@ -81,10 +84,10 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
   }
 
   Future<void> _upsert(Expense e) => _db.exec(
-        'INSERT INTO expenses (id,category,vendor,amount,date_label,has_invoice) '
-        'VALUES (:id,:cat,:vendor,:amount,:date,:inv) '
+        'INSERT INTO expenses (id,category,vendor,amount,date_label,has_invoice,invoice_file) '
+        'VALUES (:id,:cat,:vendor,:amount,:date,:inv,:file) '
         'ON DUPLICATE KEY UPDATE category=:cat, vendor=:vendor, amount=:amount, '
-        'date_label=:date, has_invoice=:inv',
+        'date_label=:date, has_invoice=:inv, invoice_file=:file',
         {
           'id': e.id,
           'cat': e.category.name,
@@ -92,6 +95,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
           'amount': e.amount,
           'date': e.dateLabel,
           'inv': e.hasInvoice ? 1 : 0,
+          'file': e.invoiceFile,
         },
       );
 
@@ -100,6 +104,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
     required String vendor,
     required double amount,
     required bool hasInvoice,
+    String invoiceFile = '',
   }) {
     final e = Expense(
       id: const Uuid().v4(),
@@ -108,6 +113,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
       amount: amount,
       dateLabel: 'Today',
       hasInvoice: hasInvoice,
+      invoiceFile: invoiceFile,
     );
     state = [e, ...state];
     _upsert(e);
@@ -119,6 +125,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
     required String vendor,
     required double amount,
     required bool hasInvoice,
+    String invoiceFile = '',
   }) {
     Expense? changed;
     state = [
@@ -131,6 +138,7 @@ class ExpensesNotifier extends StateNotifier<List<Expense>> {
             amount: amount,
             dateLabel: e.dateLabel,
             hasInvoice: hasInvoice,
+            invoiceFile: invoiceFile,
           ))
         else
           e,

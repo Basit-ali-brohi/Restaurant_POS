@@ -6,6 +6,9 @@ import '../../../../core/theme/app_tones.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../table_management/presentation/providers/table_provider.dart';
+import '../../../kitchen/presentation/providers/orders_history_provider.dart';
+import '../../../kitchen/domain/models/order_model.dart' as kds;
+import '../../../dashboard/presentation/providers/sales_provider.dart';
 import '../../domain/models/pos_models.dart';
 import '../providers/pos_providers.dart';
 
@@ -74,6 +77,43 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
           breakdown: breakdown,
           payment: payment,
         );
+
+    final label =
+        type == OrderType.dineIn ? (table ?? 'Walk-in') : 'Takeaway';
+
+    // Mirror the paid order into the kitchen timeline so it appears in Orders
+    // History as a completed ticket.
+    final kdsOrder = kds.OrderModel(
+      id: record.id,
+      tableName: label,
+      items: cart,
+      status: kds.OrderStatus.completed,
+      timestamp: DateTime.now(),
+      orderType: type == OrderType.dineIn
+          ? kds.OrderType.dineIn
+          : kds.OrderType.takeaway,
+    );
+    final timeline = ref.read(ordersTimelineProvider.notifier);
+    timeline.logCreated(kdsOrder);
+    timeline.logCompleted(kdsOrder);
+
+    // Record the sale (marks the order PAID in history + Sales screen).
+    final cash = _tenders
+        .where((t) => t.method == PaymentMethod.cash)
+        .fold(0.0, (s, t) => s + t.amount);
+    final card = _tenders
+        .where((t) => t.method != PaymentMethod.cash)
+        .fold(0.0, (s, t) => s + t.amount);
+    ref.read(salesProvider.notifier).addSale(TransactionModel(
+          id: record.id,
+          tableLabel: label,
+          paymentMethod: _method.label,
+          total: breakdown.grandTotal,
+          time: DateTime.now(),
+          status: TransactionStatus.paid,
+          cashAmount: cash,
+          cardAmount: card,
+        ));
 
     if (type == OrderType.dineIn && table != null) {
       ref.read(tableProvider.notifier).seatTable(table, orderId: record.id);

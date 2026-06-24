@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,7 +24,22 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
   final _amount = TextEditingController();
   ExpenseCategory _category = ExpenseCategory.supplies;
   bool _invoice = true;
+  String _invoiceFile = '';
   String? _editingId;
+
+  Future<void> _pickInvoice() async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: 'Attach invoice',
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg'],
+    );
+    if (result != null && result.files.isNotEmpty) {
+      setState(() {
+        _invoiceFile = result.files.single.name;
+        _invoice = true;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -52,18 +68,21 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
           category: _category,
           vendor: _vendor.text.trim(),
           amount: amt,
-          hasInvoice: _invoice);
+          hasInvoice: _invoice,
+          invoiceFile: _invoiceFile);
     } else {
       n.addExpense(
           category: _category,
           vendor: _vendor.text.trim(),
           amount: amt,
-          hasInvoice: _invoice);
+          hasInvoice: _invoice,
+          invoiceFile: _invoiceFile);
     }
     setState(() {
       _vendor.clear();
       _amount.clear();
       _editingId = null;
+      _invoiceFile = '';
     });
   }
 
@@ -74,6 +93,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
       _amount.text = e.amount.round().toString();
       _category = e.category;
       _invoice = e.hasInvoice;
+      _invoiceFile = e.invoiceFile;
     });
   }
 
@@ -82,6 +102,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
       _editingId = null;
       _vendor.clear();
       _amount.clear();
+      _invoiceFile = '';
     });
   }
 
@@ -258,28 +279,43 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
             ),
             const SizedBox(width: 10),
             GestureDetector(
-              onTap: () => setState(() => _invoice = !_invoice),
+              onTap: _pickInvoice,
               child: Container(
                 height: 46,
+                constraints: const BoxConstraints(maxWidth: 170),
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: _invoice
+                  color: _invoiceFile.isNotEmpty
                       ? AppColors.accent.withValues(alpha: 0.12)
                       : t.surfaceAlt,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: _invoice ? AppColors.accent : t.border),
+                      color: _invoiceFile.isNotEmpty
+                          ? AppColors.accent
+                          : t.border),
                 ),
-                child: Row(children: [
-                  Icon(_invoice ? Icons.attach_file : Icons.upload_file,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(
+                      _invoiceFile.isNotEmpty
+                          ? Icons.attach_file
+                          : Icons.upload_file,
                       size: 16,
-                      color: _invoice ? AppColors.accent : t.textMuted),
+                      color: _invoiceFile.isNotEmpty
+                          ? AppColors.accent
+                          : t.textMuted),
                   const SizedBox(width: 6),
-                  Text('Invoice',
-                      style: TextStyle(
-                          color: _invoice ? AppColors.accent : t.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12.5)),
+                  Flexible(
+                    child: Text(
+                        _invoiceFile.isEmpty ? 'Attach invoice' : _invoiceFile,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: _invoiceFile.isNotEmpty
+                                ? AppColors.accent
+                                : t.textSecondary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12.5)),
+                  ),
                 ]),
               ),
             ),
@@ -361,6 +397,19 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen> {
                       fontSize: 13.5)),
               Text('${e.category.label} · ${e.dateLabel}',
                   style: TextStyle(color: t.textMuted, fontSize: 11.5)),
+              if (e.invoiceFile.isNotEmpty)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.attach_file,
+                      size: 11, color: AppColors.accent),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(e.invoiceFile,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: AppColors.accent, fontSize: 10.5)),
+                  ),
+                ]),
             ],
           ),
         ),

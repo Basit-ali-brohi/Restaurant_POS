@@ -61,6 +61,7 @@ class DbService {
       'ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date VARCHAR(32)',
       'ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS email VARCHAR(128)',
       'ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS address VARCHAR(255)',
+      "ALTER TABLE expenses ADD COLUMN IF NOT EXISTS invoice_file VARCHAR(255) DEFAULT ''",
     ];
     for (final a in alters) {
       await exec(a);
