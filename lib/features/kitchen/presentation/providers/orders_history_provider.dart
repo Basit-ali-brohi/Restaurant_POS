@@ -1,5 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+
+import '../../../cart/domain/models/cart_item_model.dart';
+import '../../../menu/domain/models/menu_item_model.dart';
+import '../../../pos/domain/models/pos_models.dart' as pos;
+import '../../../pos/presentation/providers/pos_providers.dart';
 import '../../domain/models/order_model.dart';
 
 enum OrderEventType { created, statusChanged, completed, voided, canceled, resent }
@@ -22,7 +27,13 @@ class OrderTimeline {
 }
 
 final ordersTimelineProvider = StateNotifierProvider<OrdersTimelineNotifier, List<OrderTimeline>>((ref) {
-  return OrdersTimelineNotifier();
+  final notifier = OrdersTimelineNotifier();
+  // Rebuild history from the persisted order repository so Orders History
+  // survives app restarts (the paid orders are reloaded from MySQL).
+  ref.listen<List<pos.OrderRecord>>(orderRepositoryProvider, (_, next) {
+    notifier.syncFromOrders(next);
+  }, fireImmediately: true);
+  return notifier;
 });
 
 class OrdersTimelineNotifier extends StateNotifier<List<OrderTimeline>> {
@@ -45,6 +56,52 @@ class OrdersTimelineNotifier extends StateNotifier<List<OrderTimeline>> {
       events: [TimelineEvent(time: DateTime.now(), type: OrderEventType.created)],
     );
     _upsert(tl);
+  }
+
+  /// Seeds history entries for any paid orders not already tracked (used to
+  /// rebuild Orders History from persisted MySQL orders after a restart).
+  void syncFromOrders(List<pos.OrderRecord> orders) {
+    final existing = {for (final tl in state) tl.snapshot.id};
+    final additions = <OrderTimeline>[];
+    for (final o in orders) {
+      if (o.payment == null) continue; // only completed transactions
+      if (existing.contains(o.id)) continue;
+      final items = <CartItemModel>[
+        for (var i = 0; i < o.lines.length; i++)
+          CartItemModel(
+            id: '${o.id}-$i',
+            menuItem: MenuItemModel(
+              id: '',
+              name: o.lines[i].name,
+              description: '',
+              price: o.lines[i].unitPrice,
+              image: '',
+              category: o.lines[i].category,
+            ),
+            quantity: o.lines[i].quantity,
+            variation: o.lines[i].variation,
+            modifiers: o.lines[i].modifiers,
+            unitPriceOverride: o.lines[i].unitPrice,
+          ),
+      ];
+      additions.add(OrderTimeline(
+        snapshot: OrderModel(
+          id: o.id,
+          tableName: o.tableName ?? o.orderType.label,
+          items: items,
+          status: OrderStatus.cooking,
+          timestamp: o.createdAt,
+          orderType: o.orderType == pos.OrderType.dineIn
+              ? OrderType.dineIn
+              : OrderType.takeaway,
+        ),
+        events: [TimelineEvent(time: o.createdAt, type: OrderEventType.created)],
+      ));
+    }
+    if (additions.isEmpty) return;
+    final next = [...additions, ...state]
+      ..sort((a, b) => b.snapshot.timestamp.compareTo(a.snapshot.timestamp));
+    state = next;
   }
 
   void logStatus(String orderId, OrderStatus status) {

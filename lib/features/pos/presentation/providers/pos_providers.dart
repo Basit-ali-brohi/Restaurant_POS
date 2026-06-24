@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../menu/domain/models/menu_item_model.dart';
 import '../../../cart/domain/models/cart_item_model.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
@@ -172,42 +173,84 @@ class OrderRepository extends StateNotifier<List<OrderRecord>> {
     _init();
   }
 
+  final _db = DbService.instance;
   int _billSequence = 1000;
-  static const _boxName = 'orders';
 
   /// Latest-first list of committed orders.
   List<OrderRecord> get all => state;
 
-  Future<Box> _box() async => Hive.isBoxOpen(_boxName)
-      ? Hive.box(_boxName)
-      : await Hive.openBox(_boxName);
+  static String _fmt(DateTime d) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)} '
+        '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
+  }
 
-  /// Loads persisted orders; seeds demo data on first run.
+  /// Loads persisted orders from MySQL; seeds demo data on first run.
   Future<void> _init() async {
-    try {
-      final box = await _box();
-      final raw = box.get('records', defaultValue: const <dynamic>[]);
-      final list = (raw as List)
-          .map((e) => OrderRecord.fromMap(Map<String, dynamic>.from(e as Map)))
-          .toList();
-      if (list.isEmpty) {
-        _seedDemoOrders();
-        await _save();
-      } else {
-        list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        _billSequence =
-            list.map((o) => o.billNumber).fold(1000, (a, b) => a > b ? a : b);
-        state = list;
-      }
-    } catch (_) {
-      // Corrupt/legacy cache — fall back to fresh seed.
+    if (!_db.isConnected) {
       _seedDemoOrders();
+      return;
+    }
+    final rows =
+        await _db.rows('SELECT data FROM orders ORDER BY created_at DESC');
+    if (rows.isEmpty) {
+      _seedDemoOrders();
+      for (final o in state) {
+        await _insertOrder(o);
+      }
+    } else {
+      final list = <OrderRecord>[];
+      for (final r in rows) {
+        final raw = r['data'];
+        if (raw == null || raw.isEmpty) continue;
+        list.add(OrderRecord.fromMap(
+            Map<String, dynamic>.from(jsonDecode(raw) as Map)));
+      }
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _billSequence =
+          list.map((o) => o.billNumber).fold(1000, (a, b) => a > b ? a : b);
+      state = list;
     }
   }
 
-  Future<void> _save() async {
-    final box = await _box();
-    await box.put('records', state.map((e) => e.toMap()).toList());
+  /// Persists one order: header (+ full JSON for fidelity) and its line items.
+  Future<void> _insertOrder(OrderRecord o) async {
+    await _db.exec(
+      'INSERT INTO orders (id,bill_number,order_type,table_name,status,created_at,'
+      'subtotal,tax,discount,grand_total,payment_method,data) '
+      'VALUES (:id,:bill,:type,:table,:status,:created,:sub,:tax,:disc,:grand,:pm,:data) '
+      'ON DUPLICATE KEY UPDATE status=:status, payment_method=:pm, data=:data',
+      {
+        'id': o.id,
+        'bill': o.billNumber,
+        'type': o.orderType.name,
+        'table': o.tableName,
+        'status': o.payment != null ? 'paid' : 'open',
+        'created': _fmt(o.createdAt),
+        'sub': o.breakdown.subtotal,
+        'tax': o.breakdown.taxes.fold(0.0, (s, t) => s + t.amount),
+        'disc': o.breakdown.discount,
+        'grand': o.breakdown.grandTotal,
+        'pm': o.payment?.methodLabel ?? '',
+        'data': jsonEncode(o.toMap()),
+      },
+    );
+    await _db.exec('DELETE FROM order_lines WHERE order_id=:id', {'id': o.id});
+    for (final l in o.lines) {
+      await _db.exec(
+        'INSERT INTO order_lines (order_id,name,category,variation,modifiers,quantity,unit_price) '
+        'VALUES (:o,:n,:c,:v,:m,:q,:p)',
+        {
+          'o': o.id,
+          'n': l.name,
+          'c': l.category,
+          'v': l.variation,
+          'm': jsonEncode(l.modifiers),
+          'q': l.quantity,
+          'p': l.unitPrice,
+        },
+      );
+    }
   }
 
   /// Builds a layered breakdown directly from order-line snapshots, used by the
@@ -383,7 +426,7 @@ class OrderRepository extends StateNotifier<List<OrderRecord>> {
     );
 
     state = [record, ...state];
-    _save(); // persist to the Hive database
+    _insertOrder(record); // persist to MySQL
     return record;
   }
 }

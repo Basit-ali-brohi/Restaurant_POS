@@ -62,6 +62,7 @@ class DbService {
       'ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS email VARCHAR(128)',
       'ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS address VARCHAR(255)',
       "ALTER TABLE expenses ADD COLUMN IF NOT EXISTS invoice_file VARCHAR(255) DEFAULT ''",
+      'ALTER TABLE orders ADD COLUMN IF NOT EXISTS data LONGTEXT NULL',
     ];
     for (final a in alters) {
       await exec(a);
@@ -239,7 +240,8 @@ CREATE TABLE IF NOT EXISTS orders (
   tax DOUBLE DEFAULT 0,
   discount DOUBLE DEFAULT 0,
   grand_total DOUBLE DEFAULT 0,
-  payment_method VARCHAR(64) NULL
+  payment_method VARCHAR(64) NULL,
+  data LONGTEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ''',
     '''
