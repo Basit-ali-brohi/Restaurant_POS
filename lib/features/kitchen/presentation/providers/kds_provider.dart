@@ -151,11 +151,16 @@ final stationTicketsProvider =
 
   final result = {for (final s in KitchenStation.values) s: <StationTicket>[]};
 
+  // The KDS only shows the current service — tickets from the last 6 hours.
+  // (Older orders reloaded from history shouldn't reappear as "overdue".)
+  final cutoff = DateTime.now().subtract(const Duration(hours: 6));
+
   // Oldest order first.
   final ordered = [...orders]
     ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
   for (final order in ordered) {
+    if (order.createdAt.isBefore(cutoff)) continue;
     final byStation = <KitchenStation, List<StationTicketItem>>{};
     for (var i = 0; i < order.lines.length; i++) {
       final line = order.lines[i];

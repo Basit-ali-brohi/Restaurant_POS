@@ -185,31 +185,32 @@ class OrderRepository extends StateNotifier<List<OrderRecord>> {
         '${two(d.hour)}:${two(d.minute)}:${two(d.second)}';
   }
 
-  /// Loads persisted orders from MySQL; seeds demo data on first run.
+  /// Seeds fresh demo KDS tickets every launch (recent timestamps so the
+  /// Kitchen Display opens clean), then loads the persisted PAID orders from
+  /// MySQL. Unpaid demo tickets are never persisted — they're regenerated each
+  /// run — so they can't pile up as "overdue" over time.
   Future<void> _init() async {
-    if (!_db.isConnected) {
-      _seedDemoOrders();
-      return;
+    _seedDemoOrders(); // fresh, recent KDS demo tickets (not persisted)
+    if (!_db.isConnected) return;
+
+    // Clear any previously-persisted unpaid demo tickets so they don't linger.
+    await _db.exec(
+        "DELETE FROM order_lines WHERE order_id IN (SELECT id FROM orders WHERE status='open')");
+    await _db.exec("DELETE FROM orders WHERE status='open'");
+
+    final rows = await _db.rows(
+        "SELECT data FROM orders WHERE status='paid' ORDER BY created_at DESC");
+    final paid = <OrderRecord>[];
+    for (final r in rows) {
+      final raw = r['data'];
+      if (raw == null || raw.isEmpty) continue;
+      paid.add(OrderRecord.fromMap(
+          Map<String, dynamic>.from(jsonDecode(raw) as Map)));
     }
-    final rows =
-        await _db.rows('SELECT data FROM orders ORDER BY created_at DESC');
-    if (rows.isEmpty) {
-      _seedDemoOrders();
-      for (final o in state) {
-        await _insertOrder(o);
-      }
-    } else {
-      final list = <OrderRecord>[];
-      for (final r in rows) {
-        final raw = r['data'];
-        if (raw == null || raw.isEmpty) continue;
-        list.add(OrderRecord.fromMap(
-            Map<String, dynamic>.from(jsonDecode(raw) as Map)));
-      }
-      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    if (paid.isNotEmpty) {
       _billSequence =
-          list.map((o) => o.billNumber).fold(1000, (a, b) => a > b ? a : b);
-      state = list;
+          paid.map((o) => o.billNumber).fold(_billSequence, (a, b) => a > b ? a : b);
+      state = [...state, ...paid];
     }
   }
 

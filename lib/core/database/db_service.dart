@@ -272,6 +272,17 @@ CREATE TABLE IF NOT EXISTS order_lines (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ''',
     '''
+CREATE TABLE IF NOT EXISTS feedback (
+  id VARCHAR(64) PRIMARY KEY,
+  customer VARCHAR(255),
+  rating INT DEFAULT 5,
+  comment TEXT,
+  channel VARCHAR(64),
+  days_ago INT DEFAULT 0,
+  resolved TINYINT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+''',
+    '''
 CREATE TABLE IF NOT EXISTS recipes (
   id VARCHAR(64) PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
