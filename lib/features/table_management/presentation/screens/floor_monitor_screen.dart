@@ -122,6 +122,23 @@ class _FloorMonitorScreenState extends ConsumerState<FloorMonitorScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showAddTable(context, _section),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add Table',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -179,6 +196,202 @@ class _FloorMonitorScreenState extends ConsumerState<FloorMonitorScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _showAddTable(BuildContext context, String defaultSection) async {
+    final t = AppTones(ref.read(themeProvider));
+    final nameCtrl = TextEditingController();
+    int seats = 4;
+    final sections = <String>{
+      for (final tb in ref.read(tableProvider)) tb.section
+    }.toList();
+    if (sections.isEmpty) sections.add('Ground Floor');
+    String section = sections.contains(defaultSection)
+        ? defaultSection
+        : sections.first;
+    String? error;
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => StatefulBuilder(builder: (context, setLocal) {
+        InputDecoration dec(String hint) => InputDecoration(
+              isDense: true,
+              hintText: hint,
+              hintStyle: TextStyle(color: t.textMuted),
+              filled: true,
+              fillColor: t.surfaceAlt,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: t.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide:
+                    const BorderSide(color: AppColors.accent, width: 1.5),
+              ),
+            );
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: t.border),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Add Table',
+                      style: TextStyle(
+                          color: t.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 16),
+                  Text('Table name / number',
+                      style: TextStyle(
+                          color: t.textSecondary,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameCtrl,
+                    style: TextStyle(color: t.textPrimary),
+                    decoration: dec('e.g. G41'),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Seats',
+                              style: TextStyle(
+                                  color: t.textSecondary,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: t.surfaceAlt,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: t.border),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<int>(
+                                isExpanded: true,
+                                value: seats,
+                                dropdownColor: t.surface,
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 14),
+                                items: const [2, 4, 6, 8, 10]
+                                    .map((s) => DropdownMenuItem(
+                                        value: s, child: Text('$s seats')))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setLocal(() => seats = v ?? seats),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Section',
+                              style: TextStyle(
+                                  color: t.textSecondary,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 46,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: t.surfaceAlt,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: t.border),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                isExpanded: true,
+                                value: section,
+                                dropdownColor: t.surface,
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 14),
+                                items: sections
+                                    .map((s) => DropdownMenuItem(
+                                        value: s, child: Text(s)))
+                                    .toList(),
+                                onChanged: (v) =>
+                                    setLocal(() => section = v ?? section),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ]),
+                  if (error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(error!,
+                        style: const TextStyle(
+                            color: AppColors.error, fontSize: 12.5)),
+                  ],
+                  const SizedBox(height: 18),
+                  Row(children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child:
+                          Text('Cancel', style: TextStyle(color: t.textMuted)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final name = nameCtrl.text.trim();
+                        if (name.isEmpty) {
+                          setLocal(() => error = 'Enter a table name');
+                          return;
+                        }
+                        if (ref.read(tableProvider.notifier).byId(name) !=
+                            null) {
+                          setLocal(() => error = 'Table "$name" already exists');
+                          return;
+                        }
+                        ref.read(tableProvider.notifier).addTable(
+                            name: name, seats: seats, section: section);
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Add Table',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 

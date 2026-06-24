@@ -73,6 +73,22 @@ class StockControlScreen extends ConsumerWidget {
                         horizontal: 16, vertical: 14),
                   ),
                 ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddItem(context, ref),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Item',
+                      style:
+                          TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 18),
@@ -112,7 +128,7 @@ class StockControlScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             // Data grid.
-            _grid(context, t, items),
+            _grid(context, ref, t, items),
             const SizedBox(height: 20),
             _auditLog(t, ref),
           ],
@@ -182,7 +198,8 @@ class StockControlScreen extends ConsumerWidget {
     );
   }
 
-  Widget _grid(BuildContext context, AppTones t, List<StockItem> items) {
+  Widget _grid(BuildContext context, WidgetRef ref, AppTones t,
+      List<StockItem> items) {
     return Container(
       decoration: BoxDecoration(
         color: t.surface,
@@ -212,7 +229,7 @@ class StockControlScreen extends ConsumerWidget {
             ),
           ),
           for (int i = 0; i < items.length; i++)
-            _row(context, t, items[i], last: i == items.length - 1),
+            _row(context, ref, t, items[i], last: i == items.length - 1),
         ],
       ),
     );
@@ -222,7 +239,7 @@ class StockControlScreen extends ConsumerWidget {
       style: TextStyle(
           color: t.textMuted, fontSize: 11, fontWeight: FontWeight.w700));
 
-  Widget _row(BuildContext context, AppTones t, StockItem item,
+  Widget _row(BuildContext context, WidgetRef ref, AppTones t, StockItem item,
       {required bool last}) {
     final statusColor = item.isOut
         ? AppColors.error
@@ -324,7 +341,7 @@ class StockControlScreen extends ConsumerWidget {
             ),
           ),
           SizedBox(
-            width: 150,
+            width: 184,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -339,6 +356,8 @@ class StockControlScreen extends ConsumerWidget {
                         initial: MovementType.wastage)),
                 _action(t, Icons.swap_horiz, AppColors.warning, 'Transfer',
                     () => StockTransferSheet.show(context, item.id)),
+                _action(t, Icons.delete_outline, const Color(0xFF64748B),
+                    'Delete item', () => _confirmDelete(context, ref, item)),
               ],
             ),
           ),
@@ -367,6 +386,255 @@ class StockControlScreen extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, StockItem item) {
+    final t = AppTones(ref.read(themeProvider));
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: t.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        title: Text('Delete item?',
+            style: TextStyle(
+                color: t.textPrimary, fontWeight: FontWeight.w800)),
+        content: Text('Remove "${item.name}" from inventory permanently?',
+            style: TextStyle(color: t.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: TextStyle(color: t.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(stockControllerProvider.notifier).removeItem(item.id);
+              Navigator.of(context).pop();
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddItem(BuildContext context, WidgetRef ref) async {
+    final t = AppTones(ref.read(themeProvider));
+    final name = TextEditingController();
+    final sku = TextEditingController();
+    final unit = TextEditingController(text: 'kg');
+    final qty = TextEditingController();
+    final cost = TextEditingController();
+    final low = TextEditingController(text: '5');
+    final par = TextEditingController(text: '20');
+    StockCategory category = StockCategory.rawIngredients;
+    String? error;
+
+    InputDecoration dec(String hint) => InputDecoration(
+          isDense: true,
+          hintText: hint,
+          hintStyle: TextStyle(color: t.textMuted),
+          filled: true,
+          fillColor: t.surfaceAlt,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: t.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+          ),
+        );
+
+    Widget field(String label, TextEditingController c, String hint,
+            {bool number = false}) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label,
+              style: TextStyle(
+                  color: t.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 5),
+          TextField(
+            controller: c,
+            keyboardType: number
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : TextInputType.text,
+            style: TextStyle(color: t.textPrimary, fontSize: 14),
+            decoration: dec(hint),
+          ),
+        ]);
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => StatefulBuilder(builder: (context, setLocal) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
+            child: Container(
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: t.border),
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
+                  decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: t.border))),
+                  child: Row(children: [
+                    Text('Add Inventory Item',
+                        style: TextStyle(
+                            color: t.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 20, color: t.textMuted),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ]),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        field('Item name', name, 'e.g. Basmati Rice'),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(child: field('SKU', sku, 'DG-RICE-002')),
+                          const SizedBox(width: 12),
+                          Expanded(child: field('Unit', unit, 'kg / g / L')),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text('Category',
+                            style: TextStyle(
+                                color: t.textSecondary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 5),
+                        Container(
+                          height: 46,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: t.surfaceAlt,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: t.border),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<StockCategory>(
+                              isExpanded: true,
+                              value: category,
+                              dropdownColor: t.surface,
+                              style: TextStyle(
+                                  color: t.textPrimary, fontSize: 14),
+                              items: StockCategory.values
+                                  .map((c) => DropdownMenuItem(
+                                      value: c, child: Text(c.label)))
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setLocal(() => category = v ?? category),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                              child: field('Quantity', qty, '0', number: true)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: field('Unit cost (PKR)', cost, '0',
+                                  number: true)),
+                        ]),
+                        const SizedBox(height: 12),
+                        Row(children: [
+                          Expanded(
+                              child: field('Low threshold', low, '5',
+                                  number: true)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child:
+                                  field('Par level', par, '20', number: true)),
+                        ]),
+                        if (error != null) ...[
+                          const SizedBox(height: 12),
+                          Text(error!,
+                              style: const TextStyle(
+                                  color: AppColors.error, fontSize: 12.5)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: t.border))),
+                  child: Row(children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child:
+                          Text('Cancel', style: TextStyle(color: t.textMuted)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final n = name.text.trim();
+                        final q = double.tryParse(qty.text.trim());
+                        final c = double.tryParse(cost.text.trim());
+                        if (n.isEmpty) {
+                          setLocal(() => error = 'Item name is required');
+                          return;
+                        }
+                        if (q == null || c == null) {
+                          setLocal(() =>
+                              error = 'Enter valid quantity and unit cost');
+                          return;
+                        }
+                        ref.read(stockControllerProvider.notifier).createItem(
+                              name: n,
+                              sku: sku.text.trim(),
+                              category: category,
+                              unit: unit.text.trim().isEmpty
+                                  ? 'unit'
+                                  : unit.text.trim(),
+                              quantity: q,
+                              unitCost: c,
+                              lowThreshold:
+                                  double.tryParse(low.text.trim()) ?? 0,
+                              parLevel: double.tryParse(par.text.trim()) ?? 0,
+                            );
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Add Item',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 14)),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        );
+      }),
     );
   }
 

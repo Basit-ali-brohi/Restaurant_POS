@@ -263,4 +263,21 @@ class TableNotifier extends StateNotifier<List<TableModel>> {
     ];
     _persistId(id);
   }
+
+  /// Adds a brand-new (available) table to a section.
+  void addTable(
+      {required String name, required int seats, required String section}) {
+    final id = name.trim();
+    if (id.isEmpty || byId(id) != null) return;
+    final table = TableModel(
+        id: id, name: id, seats: seats, section: section);
+    state = [...state, table];
+    _persist(table);
+  }
+
+  /// Permanently removes a table.
+  void removeTable(String id) {
+    state = state.where((t) => t.id != id).toList();
+    _db.exec('DELETE FROM restaurant_tables WHERE id=:id', {'id': id});
+  }
 }

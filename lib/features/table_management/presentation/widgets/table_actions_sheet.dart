@@ -209,6 +209,17 @@ class _TableActionsSheetState extends ConsumerState<TableActionsSheet> {
                   Navigator.of(context).pop();
                   _toast('Table ${table.name} marked out of service');
                 }),
+          const SizedBox(height: 12),
+          _actionTile(t,
+              icon: Icons.delete_outline,
+              color: AppColors.error,
+              title: 'Delete Table',
+              subtitle: 'Permanently remove this table from the floor',
+              onTap: () {
+                ref.read(tableProvider.notifier).removeTable(table.id);
+                Navigator.of(context).pop();
+                _toast('Table ${table.name} deleted');
+              }),
         ],
       ),
     );

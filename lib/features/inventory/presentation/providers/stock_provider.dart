@@ -325,6 +325,40 @@ class StockController extends StateNotifier<StockState> {
   /// Used by Goods Receiving to push received quantities into stock.
   void receiveInto(String itemId, double qty, {String? note}) =>
       addStock(itemId, qty, note: note ?? 'Goods receipt');
+
+  /// Creates a brand-new inventory item and persists it.
+  StockItem createItem({
+    required String name,
+    required String sku,
+    required StockCategory category,
+    required String unit,
+    required double quantity,
+    required double unitCost,
+    required double lowThreshold,
+    required double parLevel,
+  }) {
+    final item = StockItem(
+      id: 'S-${DateTime.now().millisecondsSinceEpoch}',
+      name: name.trim(),
+      sku: sku.trim(),
+      category: category,
+      unit: unit.trim(),
+      quantity: quantity,
+      unitCost: unitCost,
+      lowThreshold: lowThreshold,
+      parLevel: parLevel,
+    );
+    state = state.copyWith(items: [...state.items, item]);
+    _persistItem(item);
+    return item;
+  }
+
+  /// Permanently removes an inventory item.
+  void removeItem(String id) {
+    state = state.copyWith(
+        items: state.items.where((i) => i.id != id).toList());
+    _db.exec('DELETE FROM stock_items WHERE id=:id', {'id': id});
+  }
 }
 
 final stockControllerProvider =
