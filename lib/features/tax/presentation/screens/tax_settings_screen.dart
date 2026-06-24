@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qr/qr.dart';
 
+import '../../../../core/database/db_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_tones.dart';
 import '../../../../core/providers/theme_provider.dart';
@@ -38,6 +41,50 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
   bool _qrEnabled = true;
   int _invoiceSeq = 84120;
   final List<({String irn, String at, int count})> _syncLog = [];
+
+  final _db = DbService.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  /// Restores saved tax rates + toggles from MySQL (app_state key "tax").
+  Future<void> _loadConfig() async {
+    if (!_db.isConnected) return;
+    final raw = await _db.loadState('tax');
+    if (raw == null || raw.isEmpty) return;
+    final data = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    final saved = (data['profiles'] as List?) ?? const [];
+    if (!mounted) return;
+    setState(() {
+      for (final s in saved) {
+        final m = Map<String, dynamic>.from(s as Map);
+        final p = _profiles.where((p) => p.name == m['name']).toList();
+        if (p.isNotEmpty) {
+          p.first.rate = (m['rate'] as num).toDouble();
+          p.first.enabled = m['enabled'] as bool;
+        }
+      }
+      _qrEnabled = data['qrEnabled'] as bool? ?? _qrEnabled;
+    });
+  }
+
+  void _saveConfig() {
+    _db.saveState(
+        'tax',
+        jsonEncode({
+          'profiles': _profiles
+              .map((p) => {
+                    'name': p.name,
+                    'rate': p.rate,
+                    'enabled': p.enabled,
+                  })
+              .toList(),
+          'qrEnabled': _qrEnabled,
+        }));
+  }
 
   List<List<bool>> _qr(String data) {
     final code =
@@ -190,8 +237,10 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
           ),
         ),
         // Rate stepper.
-        _rateStep(t, Icons.remove,
-            () => setState(() => p.rate = (p.rate - 0.5).clamp(0, 40))),
+        _rateStep(t, Icons.remove, () {
+          setState(() => p.rate = (p.rate - 0.5).clamp(0, 40));
+          _saveConfig();
+        }),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text('${p.rate.toStringAsFixed(p.rate % 1 == 0 ? 0 : 1)}%',
@@ -200,13 +249,18 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
                   fontWeight: FontWeight.w800,
                   fontSize: 15)),
         ),
-        _rateStep(t, Icons.add,
-            () => setState(() => p.rate = (p.rate + 0.5).clamp(0, 40))),
+        _rateStep(t, Icons.add, () {
+          setState(() => p.rate = (p.rate + 0.5).clamp(0, 40));
+          _saveConfig();
+        }),
         const SizedBox(width: 14),
         Switch(
           value: p.enabled,
           activeThumbColor: AppColors.accent,
-          onChanged: (v) => setState(() => p.enabled = v),
+          onChanged: (v) {
+            setState(() => p.enabled = v);
+            _saveConfig();
+          },
         ),
       ]),
     );
@@ -357,7 +411,10 @@ class _TaxSettingsScreenState extends ConsumerState<TaxSettingsScreen> {
             Switch(
               value: _qrEnabled,
               activeThumbColor: AppColors.accent,
-              onChanged: (v) => setState(() => _qrEnabled = v),
+              onChanged: (v) {
+                setState(() => _qrEnabled = v);
+                _saveConfig();
+              },
             ),
           ]),
           Text('Print a verifiable fiscal QR on every receipt.',
