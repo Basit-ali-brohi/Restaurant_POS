@@ -21,7 +21,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   bool _notifications = true;
   bool _autoPrintReceipt = true;
-  final String _currency = 'USD';
+  final String _currency = 'PKR';
   double _serviceCharge = 5.0;
   final String _selectedLanguage = 'English';
   String _defaultOrderType = 'Dine-In';

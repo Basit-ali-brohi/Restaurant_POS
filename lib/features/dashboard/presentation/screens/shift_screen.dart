@@ -21,7 +21,9 @@ class ShiftScreen extends ConsumerWidget {
     final cashIn = ref.watch(shiftCashInTotalProvider);
     final cashOut = ref.watch(shiftCashOutTotalProvider);
     final expectedCash = ref.watch(shiftExpectedCashProvider);
-    final variance = shift.closingCash - expectedCash;
+    // Variance is only meaningful once the drawer is counted at close; while
+    // the shift is still open it stays at zero (not -opening).
+    final variance = shift.isOpen ? 0.0 : shift.closingCash - expectedCash;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
