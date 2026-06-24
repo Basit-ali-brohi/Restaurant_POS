@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+
+import '../../../../core/database/db_service.dart';
 
 // =============================================================================
 // RECIPE COSTING MODELS + PROVIDERS
@@ -72,8 +76,99 @@ class Recipe {
 /// Target food-cost threshold driving the recommended retail price.
 final targetFoodCostProvider = StateProvider<double>((ref) => 0.30);
 
-final recipesProvider = Provider<List<Recipe>>((ref) {
-  return const [
+class RecipesNotifier extends StateNotifier<List<Recipe>> {
+  RecipesNotifier() : super(_seed) {
+    _load();
+  }
+
+  final _db = DbService.instance;
+  int _seq = 4;
+
+  Recipe _fromRow(Map<String, String?> r) {
+    final raw = r['ingredients'];
+    final List ing = (raw == null || raw.isEmpty) ? const [] : jsonDecode(raw);
+    return Recipe(
+      id: r['id'] ?? '',
+      name: r['name'] ?? '',
+      category: r['category'] ?? '',
+      yieldPortions: int.tryParse(r['yield_portions'] ?? '') ?? 1,
+      sellingPrice: double.tryParse(r['selling_price'] ?? '') ?? 0,
+      ingredients: [
+        for (final i in ing)
+          RecipeIngredient(
+            name: i['name'] as String,
+            quantity: (i['quantity'] as num).toDouble(),
+            unit: i['unit'] as String,
+            costPerUnit: (i['costPerUnit'] as num).toDouble(),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _load() async {
+    if (!_db.isConnected) return;
+    final rows = await _db.rows('SELECT * FROM recipes ORDER BY id');
+    if (rows.isEmpty) {
+      for (final rec in _seed) {
+        await _persist(rec);
+      }
+    } else {
+      state = rows.map(_fromRow).toList();
+      for (final rec in state) {
+        final n = int.tryParse(rec.id.replaceAll(RegExp(r'[^0-9]'), ''));
+        if (n != null && n > _seq) _seq = n;
+      }
+    }
+  }
+
+  Future<void> _persist(Recipe rec) => _db.exec(
+        'INSERT INTO recipes (id,name,category,yield_portions,selling_price,ingredients) '
+        'VALUES (:id,:name,:cat,:yield,:price,:ing) '
+        'ON DUPLICATE KEY UPDATE name=:name, category=:cat, yield_portions=:yield, '
+        'selling_price=:price, ingredients=:ing',
+        {
+          'id': rec.id,
+          'name': rec.name,
+          'cat': rec.category,
+          'yield': rec.yieldPortions,
+          'price': rec.sellingPrice,
+          'ing': jsonEncode(rec.ingredients
+              .map((i) => {
+                    'name': i.name,
+                    'quantity': i.quantity,
+                    'unit': i.unit,
+                    'costPerUnit': i.costPerUnit,
+                  })
+              .toList()),
+        },
+      );
+
+  Recipe create({
+    required String name,
+    required String category,
+    required int yieldPortions,
+    required double sellingPrice,
+    required List<RecipeIngredient> ingredients,
+  }) {
+    final rec = Recipe(
+      id: 'R-${(++_seq).toString().padLeft(3, '0')}',
+      name: name.trim(),
+      category: category,
+      yieldPortions: yieldPortions,
+      sellingPrice: sellingPrice,
+      ingredients: ingredients,
+    );
+    state = [...state, rec];
+    _persist(rec);
+    return rec;
+  }
+
+  void remove(String id) {
+    state = state.where((r) => r.id != id).toList();
+    _db.exec('DELETE FROM recipes WHERE id=:id', {'id': id});
+  }
+
+  static const List<Recipe> _seed = [
     Recipe(
       id: 'R-001',
       name: 'Saffron Lobster Risotto',
@@ -124,4 +219,8 @@ final recipesProvider = Provider<List<Recipe>>((ref) {
       ],
     ),
   ];
-});
+}
+
+final recipesProvider =
+    StateNotifierProvider<RecipesNotifier, List<Recipe>>(
+        (ref) => RecipesNotifier());

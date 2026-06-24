@@ -51,6 +51,23 @@ class _RecipeCostingScreenState extends ConsumerState<RecipeCostingScreen> {
                   ],
                 ),
                 const Spacer(),
+                SizedBox(
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: _showNewRecipe,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('New Recipe',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 14)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
                 _targetControl(t, target),
               ],
             ),
@@ -143,6 +160,319 @@ class _RecipeCostingScreenState extends ConsumerState<RecipeCostingScreen> {
     );
   }
 
+  Future<void> _showNewRecipe() async {
+    final t = AppTones(ref.read(themeProvider));
+    final name = TextEditingController();
+    final price = TextEditingController();
+    final yieldC = TextEditingController(text: '1');
+    String category = 'Mains';
+    const cats = ['Mains', 'Starters', 'Sides', 'Desserts', 'Bar'];
+    final ingredients = <RecipeIngredient>[];
+    // New-ingredient draft controllers.
+    final ingName = TextEditingController();
+    final ingQty = TextEditingController();
+    final ingUnit = TextEditingController(text: 'g');
+    final ingCost = TextEditingController();
+    String? error;
+
+    InputDecoration dec(String h) => InputDecoration(
+          isDense: true,
+          hintText: h,
+          hintStyle: TextStyle(color: t.textMuted, fontSize: 13),
+          filled: true,
+          fillColor: t.surfaceAlt,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: t.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.accent, width: 1.4),
+          ),
+        );
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (_) => StatefulBuilder(builder: (context, setLocal) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 660),
+            child: Container(
+              decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: t.border),
+              ),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
+                  decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: t.border))),
+                  child: Row(children: [
+                    Text('New Recipe',
+                        style: TextStyle(
+                            color: t.textPrimary,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800)),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(Icons.close, size: 20, color: t.textMuted),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ]),
+                ),
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                            controller: name,
+                            style: TextStyle(color: t.textPrimary),
+                            decoration: dec('Recipe name')),
+                        const SizedBox(height: 10),
+                        Row(children: [
+                          Expanded(
+                            child: Container(
+                              height: 44,
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: t.surfaceAlt,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: t.border),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: category,
+                                  dropdownColor: t.surface,
+                                  style: TextStyle(
+                                      color: t.textPrimary, fontSize: 14),
+                                  items: cats
+                                      .map((c) => DropdownMenuItem(
+                                          value: c, child: Text(c)))
+                                      .toList(),
+                                  onChanged: (v) =>
+                                      setLocal(() => category = v ?? category),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                                controller: price,
+                                keyboardType: const TextInputType
+                                    .numberWithOptions(decimal: true),
+                                style: TextStyle(color: t.textPrimary),
+                                decoration: dec('Selling price')),
+                          ),
+                          const SizedBox(width: 10),
+                          SizedBox(
+                            width: 90,
+                            child: TextField(
+                                controller: yieldC,
+                                keyboardType: TextInputType.number,
+                                style: TextStyle(color: t.textPrimary),
+                                decoration: dec('Yield')),
+                          ),
+                        ]),
+                        const SizedBox(height: 16),
+                        Text('INGREDIENTS',
+                            style: TextStyle(
+                                color: t.textMuted,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8)),
+                        const SizedBox(height: 8),
+                        for (int i = 0; i < ingredients.length; i++)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: t.surfaceAlt,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: t.border),
+                            ),
+                            child: Row(children: [
+                              Expanded(
+                                child: Text(ingredients[i].name,
+                                    style: TextStyle(
+                                        color: t.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13)),
+                              ),
+                              Text(
+                                  '${ingredients[i].quantityLabel} · cost ${_m(ingredients[i].lineCost)}',
+                                  style: TextStyle(
+                                      color: t.textMuted, fontSize: 11.5)),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => setLocal(
+                                    () => ingredients.removeAt(i)),
+                                child: Icon(Icons.close,
+                                    size: 15,
+                                    color: AppColors.error
+                                        .withValues(alpha: 0.8)),
+                              ),
+                            ]),
+                          ),
+                        const SizedBox(height: 6),
+                        // Draft ingredient input row.
+                        Row(children: [
+                          Expanded(
+                            flex: 3,
+                            child: TextField(
+                                controller: ingName,
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 13),
+                                decoration: dec('Ingredient')),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: TextField(
+                                controller: ingQty,
+                                keyboardType: const TextInputType
+                                    .numberWithOptions(decimal: true),
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 13),
+                                decoration: dec('Qty')),
+                          ),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            width: 56,
+                            child: TextField(
+                                controller: ingUnit,
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 13),
+                                decoration: dec('unit')),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: TextField(
+                                controller: ingCost,
+                                keyboardType: const TextInputType
+                                    .numberWithOptions(decimal: true),
+                                style: TextStyle(
+                                    color: t.textPrimary, fontSize: 13),
+                                decoration: dec('cost/unit')),
+                          ),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            height: 42,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final n = ingName.text.trim();
+                                final q =
+                                    double.tryParse(ingQty.text.trim());
+                                final c =
+                                    double.tryParse(ingCost.text.trim());
+                                if (n.isEmpty || q == null || c == null) {
+                                  return;
+                                }
+                                setLocal(() {
+                                  ingredients.add(RecipeIngredient(
+                                      name: n,
+                                      quantity: q,
+                                      unit: ingUnit.text.trim().isEmpty
+                                          ? 'g'
+                                          : ingUnit.text.trim(),
+                                      costPerUnit: c));
+                                  ingName.clear();
+                                  ingQty.clear();
+                                  ingCost.clear();
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: t.surfaceAlt,
+                                foregroundColor: t.textPrimary,
+                                elevation: 0,
+                                side: BorderSide(color: t.border),
+                                padding: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Icon(Icons.add, size: 18),
+                            ),
+                          ),
+                        ]),
+                        if (error != null) ...[
+                          const SizedBox(height: 10),
+                          Text(error!,
+                              style: const TextStyle(
+                                  color: AppColors.error, fontSize: 12.5)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: t.border))),
+                  child: Row(children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child:
+                          Text('Cancel', style: TextStyle(color: t.textMuted)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final n = name.text.trim();
+                        final p = double.tryParse(price.text.trim());
+                        if (n.isEmpty) {
+                          setLocal(() => error = 'Recipe name is required');
+                          return;
+                        }
+                        if (p == null || p <= 0) {
+                          setLocal(() => error = 'Enter a valid selling price');
+                          return;
+                        }
+                        if (ingredients.isEmpty) {
+                          setLocal(() => error = 'Add at least one ingredient');
+                          return;
+                        }
+                        ref.read(recipesProvider.notifier).create(
+                              name: n,
+                              category: category,
+                              yieldPortions:
+                                  int.tryParse(yieldC.text.trim()) ?? 1,
+                              sellingPrice: p,
+                              ingredients: List.of(ingredients),
+                            );
+                        Navigator.of(context).pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 22),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Create Recipe',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 14)),
+                    ),
+                  ]),
+                ),
+              ]),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
   Widget _recipeCard(AppTones t, Recipe r, double target) {
     final open = _expanded.contains(r.id);
     final overTarget = r.foodCostPct > target;
@@ -204,6 +534,20 @@ class _RecipeCostingScreenState extends ConsumerState<RecipeCostingScreen> {
                             color: AppColors.accent,
                             fontWeight: FontWeight.w800,
                             fontSize: 13.5)),
+                  ),
+                  SizedBox(
+                    width: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      tooltip: 'Delete recipe',
+                      icon: Icon(Icons.delete_outline,
+                          size: 18,
+                          color: AppColors.error.withValues(alpha: 0.8)),
+                      onPressed: () {
+                        ref.read(recipesProvider.notifier).remove(r.id);
+                        _expanded.remove(r.id);
+                      },
+                    ),
                   ),
                 ],
               ),
