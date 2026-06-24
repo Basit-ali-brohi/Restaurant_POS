@@ -28,14 +28,14 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
     final isDarkMode = ref.watch(themeProvider);
     final timelines = ref.watch(ordersTimelineProvider);
     final sales = ref.watch(salesProvider); // Watch sales for payment status
+    final stationTickets = ref.watch(stationTicketsProvider);
+
+    // An order is still "in kitchen" while any of its station tickets remain
+    // un-bumped on the KDS; once all are Ready it reads as Completed.
+    bool stillCooking(String orderId) => stationTickets.values
+        .any((list) => list.any((tk) => tk.orderId == orderId));
 
     final filtered = timelines.where((t) {
-      // Filter: Show only Ready or Completed orders as per request
-      // "Jab KDS par 'Mark Ready' click ho, toh wo order yahan move ho jaye"
-      if (t.snapshot.status == OrderStatus.pending || t.snapshot.status == OrderStatus.cooking) {
-        return false;
-      }
-
       if (_query.trim().isEmpty) return true;
       final q = _query.trim().toLowerCase();
       return t.snapshot.id.toLowerCase().contains(q) ||
@@ -174,6 +174,7 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
                               isDarkMode: isDarkMode,
                               isSmallScreen: isSmallScreen,
                               isPaid: isPaid,
+                              inKitchen: stillCooking(tl.snapshot.id),
                               totalAmount: hasTxn ? txn.total : tl.snapshot.items.fold(0, (sum, item) => sum + (item.menuItem.price * item.quantity)),
                               onVoid: () => _logPrompt(context, tl.snapshot.id, isDarkMode, type: OrderEventType.voided),
                               onCancel: () => _logPrompt(context, tl.snapshot.id, isDarkMode, type: OrderEventType.canceled),
@@ -275,6 +276,8 @@ class _OrdersHistoryScreenState extends ConsumerState<OrdersHistoryScreen> {
     for (final station in KitchenStation.values) {
       kitchen.setStage('${tl.snapshot.id}::${station.name}', TicketStage.pending);
     }
+    // Flag this order as a re-fire so the KDS card shows a "RE-SENT" tag.
+    ref.read(resentOrdersProvider.notifier).update((s) => {...s, tl.snapshot.id});
     ref.read(ordersTimelineProvider.notifier).logResent(tl.snapshot.id);
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Order re-sent to KDS — check Kitchen Display")));
@@ -349,6 +352,7 @@ class _TimelineCard extends StatelessWidget {
   final bool isDarkMode;
   final bool isSmallScreen;
   final bool isPaid;
+  final bool inKitchen;
   final double totalAmount;
   final VoidCallback onVoid;
   final VoidCallback onCancel;
@@ -359,6 +363,7 @@ class _TimelineCard extends StatelessWidget {
     required this.isDarkMode,
     required this.isSmallScreen,
     required this.isPaid,
+    required this.inKitchen,
     required this.totalAmount,
     required this.onVoid,
     required this.onCancel,
@@ -368,12 +373,8 @@ class _TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = switch (timeline.snapshot.status) {
-      OrderStatus.pending => Colors.orange,
-      OrderStatus.cooking => Colors.blue,
-      OrderStatus.ready => Colors.green,
-      OrderStatus.completed => Colors.grey,
-    };
+    final statusColor = inKitchen ? const Color(0xFFF59E0B) : Colors.green;
+    final statusLabel = inKitchen ? "IN KITCHEN" : "COMPLETED";
 
     final headerRow = isSmallScreen
         ? Column(
@@ -385,7 +386,7 @@ class _TimelineCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: statusColor.withOpacity(0.18), borderRadius: BorderRadius.circular(8), border: Border.all(color: statusColor)),
-                    child: Text(timeline.snapshot.status.name.toUpperCase(), style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
+                    child: Text(statusLabel, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
                   ),
                   Text("#${timeline.snapshot.id.substring(0, 6)}", style: TextStyle(color: isDarkMode ? Colors.white54 : Colors.black54)),
                 ],
@@ -432,7 +433,7 @@ class _TimelineCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(color: statusColor.withOpacity(0.18), borderRadius: BorderRadius.circular(8), border: Border.all(color: statusColor)),
-                child: Text(timeline.snapshot.status.name.toUpperCase(), style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
+                child: Text(statusLabel, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold, fontSize: 12)),
               ),
               const SizedBox(width: 8),
               Text(timeline.snapshot.tableName, style: TextStyle(color: isDarkMode ? Colors.white : Colors.black87, fontWeight: FontWeight.bold)),

@@ -134,6 +134,10 @@ final kitchenProvider =
   return KitchenNotifier();
 });
 
+/// Order ids re-sent to the kitchen from Orders History — flagged on the KDS
+/// card so the line cook knows it's a re-fire, not a fresh order.
+final resentOrdersProvider = StateProvider<Set<String>>((ref) => <String>{});
+
 // =============================================================================
 // DERIVED QUEUE — committed orders -> live station tickets
 // =============================================================================

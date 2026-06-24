@@ -81,21 +81,20 @@ class _PaymentSheetState extends ConsumerState<PaymentSheet> {
     final label =
         type == OrderType.dineIn ? (table ?? 'Walk-in') : 'Takeaway';
 
-    // Mirror the paid order into the kitchen timeline so it appears in Orders
-    // History as a completed ticket.
+    // Mirror the paid order into the kitchen timeline. It enters as "cooking"
+    // (sent to the kitchen) — Orders History shows it as IN KITCHEN until the
+    // KDS bumps all of its tickets, at which point it reads as COMPLETED.
     final kdsOrder = kds.OrderModel(
       id: record.id,
       tableName: label,
       items: cart,
-      status: kds.OrderStatus.completed,
+      status: kds.OrderStatus.cooking,
       timestamp: DateTime.now(),
       orderType: type == OrderType.dineIn
           ? kds.OrderType.dineIn
           : kds.OrderType.takeaway,
     );
-    final timeline = ref.read(ordersTimelineProvider.notifier);
-    timeline.logCreated(kdsOrder);
-    timeline.logCompleted(kdsOrder);
+    ref.read(ordersTimelineProvider.notifier).logCreated(kdsOrder);
 
     // Record the sale (marks the order PAID in history + Sales screen).
     final cash = _tenders

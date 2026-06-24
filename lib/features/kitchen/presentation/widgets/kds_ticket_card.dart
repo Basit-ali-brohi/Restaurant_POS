@@ -49,6 +49,8 @@ class KdsTicketCard extends ConsumerWidget {
     final stage = ref.watch(kitchenProvider.select(
         (m) => m[ticket.key] ?? TicketStage.pending));
     final notifier = ref.read(kitchenProvider.notifier);
+    final resent = ref.watch(
+        resentOrdersProvider.select((s) => s.contains(ticket.orderId)));
 
     final elapsed = now.difference(ticket.createdAt);
     final aging = agingFor(elapsed);
@@ -79,7 +81,7 @@ class KdsTicketCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _header(meta, elapsed, stage),
+          _header(meta, elapsed, stage, resent),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Column(
@@ -93,8 +95,8 @@ class KdsTicketCard extends ConsumerWidget {
   }
 
   // --- Header: route + order no + clock + elapsed timer + stage badge --------
-  Widget _header(
-      ({Color color, String label}) meta, Duration elapsed, TicketStage stage) {
+  Widget _header(({Color color, String label}) meta, Duration elapsed,
+      TicketStage stage, bool resent) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
@@ -121,6 +123,28 @@ class KdsTicketCard extends ConsumerWidget {
                       fontWeight: FontWeight.w700,
                       fontSize: 13)),
               const Spacer(),
+              if (resent) ...[
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: const Color(0xFFF59E0B)),
+                  ),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.replay, size: 12, color: Color(0xFFD97706)),
+                    SizedBox(width: 4),
+                    Text('RE-SENT',
+                        style: TextStyle(
+                            color: Color(0xFFD97706),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            letterSpacing: 0.5)),
+                  ]),
+                ),
+                const SizedBox(width: 6),
+              ],
               _stageBadge(stage),
             ],
           ),
